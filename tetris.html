@@ -176,7 +176,7 @@
   <script>
     window.APP.mountHeader(false);
 
-    const SCALE = 1.15;
+    let SCALE = 1.15;
     let pallets = [
       { l: 120, w: 80, kg: 260, stop: 3 },
       { l: 120, w: 80, kg: 220, stop: 2 },
@@ -299,12 +299,17 @@
       return false;
     }
 
+    let _rsT; window.addEventListener("resize", () => { clearTimeout(_rsT); _rsT = setTimeout(() => renderBed(), 150); });
+
     function renderBed() {
       const van = window.APP.getActiveVan();
       const gvw = van.id === "pod-25t" ? 2490 : 3500;
       document.getElementById("bed-info").textContent = `${van.name} • Ložná plocha ${van.lengthCm} × ${van.widthCm} cm • Nosnost ${van.payloadKg} kg`;
 
       const bed = document.getElementById("truck-bed");
+      // Na mobilu zmenšíme korbu tak, aby se vešla na šířku displeje (kabina + korba + zadek)
+      const wrapW = bed.parentElement.parentElement.clientWidth || 0;
+      SCALE = wrapW ? Math.max(0.8, Math.min(1.15, (wrapW - 150) / van.lengthCm)) : 1.15;
       const bedW = Math.round(van.lengthCm * SCALE);
       const bedH = Math.round(van.widthCm * SCALE);
       bed.style.width = `${bedW}px`;
@@ -380,6 +385,7 @@
 
         const el = document.createElement("div");
         el.className = `absolute border rounded-lg p-2 flex flex-col justify-between cursor-move select-none z-20 ${overflows ? 'bg-red-600/70 border-red-200 text-white' : stopColors[p.stop]}`;
+        el.style.touchAction = "none";
         el.style.left = `${posX * SCALE}px`;
         el.style.top = `${posY * SCALE}px`;
         el.style.width = `${p.l * SCALE - 3}px`;
@@ -389,15 +395,15 @@
           <div class="flex items-center justify-between text-xs font-bold">
             <span>#${p.stop} • ${p.kg}kg</span>
             <div class="flex gap-1">
-              <button onclick="rotatePallet(${p.origIdx}); event.stopPropagation();" title="Otočit o 90°" class="hover:text-orange-300 px-1">↻</button>
-              <button onclick="removePallet(${p.origIdx}, event)" class="hover:text-red-300 px-1">✕</button>
+              <button onclick="rotatePallet(${p.origIdx}); event.stopPropagation();" title="Otočit o 90°" class="hover:text-orange-300 px-2 py-1">↻</button>
+              <button onclick="removePallet(${p.origIdx}, event)" class="hover:text-red-300 px-2 py-1">✕</button>
             </div>
           </div>
-          <div class="text-[11px] opacity-85">${hitsArch ? '⚠️ Podběh!' : `${p.l}×${p.w}`}</div>
+          <div class="text-[11px] opacity-85 ${(SCALE < 1 && !hitsArch) ? 'hidden' : ''}">${hitsArch ? '⚠️ Podběh!' : `${p.l}×${p.w}`}</div>
         `;
 
         // Plynulé posouvání palety myší po korbě (mění těžiště Předek/Zadek v reálném čase)
-        el.addEventListener("mousedown", (ev) => {
+        el.addEventListener("pointerdown", (ev) => {
           if (ev.target.tagName === "BUTTON") return;
           const startX = ev.clientX, startY = ev.clientY;
           const origX = posX, origY = posY;
@@ -420,11 +426,11 @@
             renderBed();
           };
           const onUp = () => {
-            window.removeEventListener("mousemove", onMove);
-            window.removeEventListener("mouseup", onUp);
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);window.removeEventListener("pointercancel", onUp);
           };
-          window.addEventListener("mousemove", onMove);
-          window.addEventListener("mouseup", onUp);
+          window.addEventListener("pointermove", onMove);
+          window.addEventListener("pointerup", onUp);window.addEventListener("pointercancel", onUp);
         });
 
         bed.appendChild(el);

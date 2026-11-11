@@ -16,3 +16,6 @@ images.jfif
 # Operační systém
 .DS_Store
 Thumbs.db
+
+# Zdrojov� grafiky
+*.psd

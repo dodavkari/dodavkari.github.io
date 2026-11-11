@@ -428,6 +428,21 @@ window.APP = {
           rgba(255, 85, 38, 0.10) 12px
         ), linear-gradient(90deg, rgba(255,77,30,0.2) 0%, #FF5526 100%);
       }
+      /* === Mobilní optimalizace === */
+      html { -webkit-text-size-adjust: 100%; }
+      body { overflow-x: hidden; padding-bottom: env(safe-area-inset-bottom); }
+      input, select, textarea { min-width: 0; max-width: 100%; }
+      img, svg, canvas, video { max-width: 100%; }
+      pre { overflow-x: auto; }
+      #wa-modal > div, #custom-van-modal > div { max-height: 92vh; overflow-y: auto; }
+      @media (max-width: 640px) {
+        input, select, textarea { font-size: 16px !important; } /* iPhone nezoomuje při psaní */
+        .trukon-btn, button[type="submit"] { min-height: 46px; }
+        h1 { overflow-wrap: anywhere; }
+        table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .trukon-card { border-radius: 1.25rem !important; }
+        .leaflet-container { touch-action: pan-x pan-y; }
+      }
       .text-xs { font-size: 0.84rem !important; line-height: 1.35rem !important; }
       .text-\\[11px\\], .text-\\[10px\\] { font-size: 0.78rem !important; line-height: 1.2rem !important; }
     `;
@@ -500,8 +515,8 @@ window.APP = {
     document.querySelectorAll(".hdr-role-btn").forEach(b => {
       const active = b.getAttribute("data-role") === role;
       b.className = active
-        ? "hdr-role-btn px-3.5 py-1.5 rounded-full text-sm font-semibold trukon-pill-active transition"
-        : "hdr-role-btn px-3.5 py-1.5 rounded-full text-sm font-medium text-zinc-400 hover:text-white transition";
+        ? "hdr-role-btn flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-full text-sm text-center font-semibold trukon-pill-active transition"
+        : "hdr-role-btn flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-full text-sm text-center font-medium text-zinc-400 hover:text-white transition";
     });
     if (typeof window.onRoleChanged === "function") {
       window.onRoleChanged(role);
@@ -695,46 +710,40 @@ window.APP = {
     const role = this.getRole();
 
     const header = document.createElement("header");
-    header.className = "sticky top-0 z-40 bg-[#141518]/95 backdrop-blur-md border-b border-white/10";
+    header.className = "lg:sticky top-0 z-40 bg-[#141518]/95 backdrop-blur-md border-b border-white/10";
+    const roleBtn = (key, label) => `
+          <button onclick="window.APP.setRole('${key}')" data-role="${key}" class="hdr-role-btn flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-full text-sm text-center ${role === key ? 'font-semibold trukon-pill-active' : 'font-medium text-zinc-400 hover:text-white'} transition">${label}</button>`;
     header.innerHTML = `
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-        
-        <!-- Logo a název -->
-        <div class="flex items-center gap-3">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 lg:py-0 lg:h-16 flex flex-wrap lg:flex-nowrap items-center gap-x-3 gap-y-2.5">
+
+        <!-- Logo a zpět -->
+        <div class="flex items-center gap-2.5 min-w-0 flex-1 lg:flex-none">
           ${!isHome ? `
-            <a href="index.html" class="text-sm font-medium text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition">
-              <span>←</span> <span>Přehled</span>
+            <a href="index.html" aria-label="Zpět na přehled" class="shrink-0 text-sm font-medium text-zinc-200 bg-white/5 hover:bg-white/10 w-10 h-10 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1.5 transition">
+              <span>←</span> <span class="hidden sm:inline">Přehled</span>
             </a>
           ` : ``}
-          <a href="index.html" class="flex items-center gap-2.5 font-bold text-white tracking-tight text-base sm:text-lg">
-            <span class="w-8 h-8 rounded-xl trukon-btn flex items-center justify-center text-white">${this.svg('van', 'w-4 h-4')}</span>
-            <span>Nástroje pro dodávkáře</span>
+          <a href="index.html" class="flex items-center gap-2.5 min-w-0 font-bold text-white tracking-tight text-base sm:text-lg">
+            <span class="shrink-0 w-9 h-9 sm:w-8 sm:h-8 rounded-xl trukon-btn flex items-center justify-center text-white">${this.svg('van', 'w-4 h-4')}</span>
+            <span class="truncate">Nástroje pro dodávkáře</span>
           </a>
         </div>
 
         <!-- Přepínač Kdo jsi: Řidič / Dispečer / Majitel -->
-        <div class="inline-flex p-1 rounded-full bg-[#1C1D22] border border-white/10">
-          <button onclick="window.APP.setRole('ridic')" data-role="ridic" class="hdr-role-btn px-3.5 py-1.5 rounded-full text-sm ${role === 'ridic' ? 'font-semibold trukon-pill-active' : 'font-medium text-zinc-400 hover:text-white'} transition">
-            Řidič
-          </button>
-          <button onclick="window.APP.setRole('dispecer')" data-role="dispecer" class="hdr-role-btn px-3.5 py-1.5 rounded-full text-sm ${role === 'dispecer' ? 'font-semibold trukon-pill-active' : 'font-medium text-zinc-400 hover:text-white'} transition">
-            Dispečer
-          </button>
-          <button onclick="window.APP.setRole('majitel')" data-role="majitel" class="hdr-role-btn px-3.5 py-1.5 rounded-full text-sm ${role === 'majitel' ? 'font-semibold trukon-pill-active' : 'font-medium text-zinc-400 hover:text-white'} transition">
-            Majitel
-          </button>
+        <div class="order-3 sm:order-none w-full sm:w-auto inline-flex p-1 rounded-full bg-[#1C1D22] border border-white/10">
+          ${roleBtn('ridic', 'Řidič')}${roleBtn('dispecer', 'Dispečer')}${roleBtn('majitel', 'Majitel')}
         </div>
 
-        <!-- Pravá část hlavičky: Nástěnka + Kurz + Výběr auta -->
-        <div class="hidden lg:flex items-center gap-2.5">
-          <a href="dispecink.html" class="text-sm font-semibold text-white bg-white/10 hover:bg-white/15 border border-white/15 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition">
+        <!-- Nástěnka + Kurz + Výběr auta (na mobilu pod sebou přes celou šířku) -->
+        <div class="order-4 lg:order-none w-full lg:w-auto flex items-center gap-2.5">
+          <a href="dispecink.html" class="shrink-0 text-sm font-semibold text-white bg-white/10 hover:bg-white/15 border border-white/15 px-3.5 py-2 lg:py-1.5 rounded-full flex items-center gap-1.5 transition">
             ${this.svg('board', 'w-4 h-4 text-orange-400')}
             <span>Nástěnka</span>
           </a>
-          <span id="hdr-eur-badge" class="text-sm font-medium text-orange-300 bg-orange-500/10 border border-orange-500/25 px-3 py-1.5 rounded-full">
+          <span id="hdr-eur-badge" class="shrink-0 hidden sm:inline text-sm font-medium text-orange-300 bg-orange-500/10 border border-orange-500/25 px-3 py-2 lg:py-1.5 rounded-full">
             1 € = ${this.eurRate.toFixed(2).replace(".", ",")} Kč
           </span>
-          <select id="global-van-select" class="bg-[#1C1D22] hover:bg-zinc-800 text-zinc-100 text-sm font-medium rounded-full border border-white/10 px-3.5 py-1.5 max-w-[240px] truncate focus:outline-none cursor-pointer transition">
+          <select id="global-van-select" aria-label="Vybrané auto" class="flex-1 min-w-0 lg:flex-none bg-[#1C1D22] hover:bg-zinc-800 text-zinc-100 text-sm font-medium rounded-full border border-white/10 px-3.5 py-2 lg:py-1.5 lg:max-w-[240px] truncate focus:outline-none cursor-pointer transition">
             ${vans.map(v => `
               <option value="${v.id}" ${v.id === van.id ? "selected" : ""}>
                 ${v.name} (${v.payloadKg} kg)
@@ -745,8 +754,7 @@ window.APP = {
         </div>
 
       </div>
-    `;
-    document.body.prepend(header);
+    `;    document.body.prepend(header);
 
     const modals = document.createElement("div");
     modals.innerHTML = `
