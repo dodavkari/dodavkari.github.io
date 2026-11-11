@@ -1,15 +1,11 @@
 // shared.js — Globální design systém, databáze dodávek, přepínač rolí (Řidič / Dispečer / Majitel) a živý kurz ČNB
 
 // === KONFIGURACE POPTÁVEK A ODESÍLÁNÍ (ZDARMA PRO GITHUB PAGES) ===
-// 1. WhatsApp číslo majitele webu (bez mezer, bez +):
-window.WHATSAPP_PHONE = "420720105302";
+// 1. Google Tabulka: Vlož svou Web App URL z Google Apps Script, kam se automaticky ukládají poptávky:
+window.LEADS_WEBHOOK = "";
 
-// 2. NEJRYCHLEJŠÍ ZPŮSOB (ZDARMA, 10 SEKUND): Zadej svůj e-mail a poptávky ti budou chodit přímo do e-mailu přes FormSubmit.co:
-// Stačí vložit např. "tvuj-email@seznam.cz" nebo "tvuj-email@gmail.com":
+// 2. Volitelné: E-mail přes FormSubmit.co (pokud chceš notifikace o poptávkách i do e-mailu):
 window.LEADS_EMAIL = "";
-
-// 3. ALTERNATIVA PRO GOOGLE TABULKY: Pokud chceš data automaticky sypat do řádků v Google Sheets, vlož Web App URL z Google Apps Script:
-window.LEADS_WEBHOOK = "https://script.google.com/macros/s/AKfycbw0b0BcrhxWqTe5uyXLCKMX-uY1BpUW973JHsUr9pxwSLNazL8HGeNGW3WlTH0BMqPctA/exec";
 
 // === GLOBÁLNÍ NASTAVENÍ POZADÍ A ROZMAZÁNÍ (Můžeš měnit zde v kódu nebo na stránce nastaveni.html) ===
 window.BG_DEFAULT_CONFIG = {
@@ -624,7 +620,28 @@ window.APP = {
 
     this.trackEvent("want_submit", `${this.currentFeatureTopic} (${pref})`);
 
-    // 2. Odeslání do e-mailu přes bezplatný FormSubmit.co (pokud je vyplněn LEADS_EMAIL)
+    // 2. Odeslání do Google Tabulky (pokud je vyplněn LEADS_WEBHOOK z Google Apps Script)
+    const hasWebhook = Boolean(window.LEADS_WEBHOOK && window.LEADS_WEBHOOK.startsWith("http"));
+    if (hasWebhook) {
+      try {
+        fetch(window.LEADS_WEBHOOK, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: new Date().toLocaleString("cs-CZ"),
+            topic: this.currentFeatureTopic,
+            name,
+            phone,
+            company: company || "Neuvedeno",
+            van: van.name,
+            contactPreference: isCall ? "Zavolejte mi" : "Napište mi na WhatsApp"
+          })
+        }).catch(err => console.log("Google Sheets webhook error:", err));
+      } catch (err) {}
+    }
+
+    // 3. Odeslání do e-mailu přes bezplatný FormSubmit.co (pokud je vyplněn LEADS_EMAIL)
     const hasEmail = Boolean(window.LEADS_EMAIL && window.LEADS_EMAIL.includes("@"));
     if (hasEmail) {
       try {
@@ -648,45 +665,7 @@ window.APP = {
       } catch (err) {}
     }
 
-    // 3. Odeslání do Google Tabulky (pokud je vyplněn LEADS_WEBHOOK z Google Apps Script)
-    const hasWebhook = Boolean(window.LEADS_WEBHOOK && window.LEADS_WEBHOOK.startsWith("http"));
-    if (hasWebhook) {
-      try {
-        fetch(window.LEADS_WEBHOOK, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            date: new Date().toLocaleString("cs-CZ"),
-            topic: this.currentFeatureTopic,
-            name,
-            phone,
-            company: company || "Neuvedeno",
-            van: van.name,
-            contactPreference: isCall ? "Zavolejte mi" : "Napište mi na WhatsApp"
-          })
-        }).catch(err => console.log("Google Sheets webhook error:", err));
-      } catch (err) {}
-    }
-
-    // 4. WhatsApp: Otevřeme, pokud návštěvník zvolil WhatsApp, nebo jako spolehlivou zálohu
-    if (!isCall || (!hasEmail && !hasWebhook)) {
-      const intro = isCall
-        ? `Dobrý den, prosím o ZAVOLÁNÍ na telefon: ${phone}.\n`
-        : `Dobrý den, píšu přes WhatsApp ohledně poptávky.\n`;
-
-      const msg = `${intro}` +
-                  `Téma: ${this.currentFeatureTopic}\n` +
-                  `Jméno: ${name}\n` +
-                  `Telefon: ${phone}\n` +
-                  (company ? `Firma: ${company}\n` : ``) +
-                  `Dodávka: ${van.name}\n` +
-                  `Způsob kontaktu: ${isCall ? 'Telefonní hovor (Zavolejte mi)' : 'Zpráva na WhatsApp'}`;
-
-      window.open(`https://wa.me/${window.WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, "_blank");
-    }
-
-    // 5. Zobrazit "Děkuji za zájem." přímo ve formuláři
+    // 4. Zobrazit "Děkuji za zájem." přímo ve formuláři (bez otevírání WhatsApp)
     const formView = document.getElementById("wa-form-view");
     const successView = document.getElementById("wa-success-view");
     if (formView && successView) {
