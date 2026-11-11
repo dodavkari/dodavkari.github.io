@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diety, zálohy a účtenky — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    @media print {
+      body { background: white !important; color: black !important; }
+      header, .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-20 flex-1 w-full">
+
+    <div class="mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Diety, zálohy a účtenky</h1>
+      <p class="text-base text-zinc-300 mt-1">
+        Zapiš přejezd hranic jedním klikem, přidej hotovostní výdaje a spočítej vyúčtování cesty.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEVÝ SLOUPEC -->
+      <div class="lg:col-span-5 space-y-5 no-print">
+
+        <div class="trukon-card rounded-3xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="text-sm font-bold text-white">Poskytnutá záloha před jízdou (EUR)</label>
+            <input type="number" id="d-advance" value="200" oninput="renderDays()"
+                   class="w-28 bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2 text-base font-bold text-orange-300 text-right focus:outline-none">
+          </div>
+        </div>
+
+        <div class="trukon-card-subtle rounded-3xl p-5 space-y-3">
+          <div class="text-sm font-bold text-white">📍 1-Klik: Právě jsem přejel hranice</div>
+          <div class="grid grid-cols-2 gap-2.5 text-sm">
+            <button onclick="quickBorder('Německo', 45)" class="bg-[#141518] hover:bg-zinc-800 border border-white/10 rounded-xl py-3 px-3.5 text-left font-semibold text-white transition">
+              🇩🇪 Německo <span class="text-orange-300">45 €</span>
+            </button>
+            <button onclick="quickBorder('Francie', 45)" class="bg-[#141518] hover:bg-zinc-800 border border-white/10 rounded-xl py-3 px-3.5 text-left font-semibold text-white transition">
+              🇫🇷 Francie <span class="text-orange-300">45 €</span>
+            </button>
+            <button onclick="quickBorder('Rakousko', 45)" class="bg-[#141518] hover:bg-zinc-800 border border-white/10 rounded-xl py-3 px-3.5 text-left font-semibold text-white transition">
+              🇦🇹 Rakousko <span class="text-orange-300">45 €</span>
+            </button>
+            <button onclick="quickBorder('Polsko', 40)" class="bg-[#141518] hover:bg-zinc-800 border border-white/10 rounded-xl py-3 px-3.5 text-left font-semibold text-white transition">
+              🇵🇱 Polsko <span class="text-orange-300">40 €</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="trukon-card rounded-3xl p-5 space-y-4">
+          <div class="text-sm font-bold text-white">Přidat den a hotovostní účtenku</div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Stát</label>
+              <select id="d-country" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2.5 text-sm text-white">
+                <option value="45|Německo">Německo (45 €)</option>
+                <option value="45|Rakousko">Rakousko (45 €)</option>
+                <option value="45|Francie">Francie (45 €)</option>
+                <option value="45|Itálie">Itálie (45 €)</option>
+                <option value="45|Španělsko">Španělsko (45 €)</option>
+                <option value="45|Belgie / NL">Belgie / NL (45 €)</option>
+                <option value="40|Polsko">Polsko (40 €)</option>
+                <option value="35|Slovensko">Slovensko (35 €)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Hodiny v zahraničí</label>
+              <input type="number" id="d-hours" value="19" min="1" max="24" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2.5 text-sm text-white font-bold">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Účtenka hotově (EUR)</label>
+              <input type="number" id="d-exp" value="0" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2.5 text-sm text-white font-bold">
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Za co</label>
+              <select id="d-cat" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2.5 text-sm text-white">
+                <option value="Mýto / Tunel">🛣️ Mýto / Tunel</option>
+                <option value="Parkovné">🅿️ Parkovné</option>
+                <option value="Nafta / AdBlue">⛽ Nafta / AdBlue</option>
+                <option value="Ostatní">🧾 Ostatní</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-1">
+            <label class="cursor-pointer bg-[#141518] hover:bg-zinc-800 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-zinc-200 flex items-center gap-1.5">
+              <span>📷 Vyfotit účtenku</span>
+              <input type="file" id="d-photo" accept="image/*" capture="environment" onchange="onReceiptPhoto(event)" class="hidden">
+            </label>
+            <span id="photo-status" class="text-xs text-emerald-400 font-semibold"></span>
+          </div>
+
+          <label class="flex items-center justify-between text-sm text-zinc-300 pt-2 border-t border-white/10">
+            <span>Přidat kapesné (+40 % ke stravnému)</span>
+            <input type="checkbox" id="d-pocket" onchange="renderDays()" class="w-4 h-4 accent-orange-500 rounded">
+          </label>
+
+          <button onclick="addDay()" class="w-full trukon-btn text-sm py-3 rounded-xl transition">
+            + Přidat do vyúčtování
+          </button>
+        </div>
+      </div>
+
+      <!-- PRAVÝ SLOUPEC -->
+      <div class="lg:col-span-7 space-y-5">
+        <div class="trukon-card rounded-3xl p-6 space-y-5">
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div class="bg-[#141518] border border-white/10 rounded-2xl p-4">
+              <div class="text-xs text-zinc-400">Diety celkem</div>
+              <div id="out-diets" class="text-2xl font-bold text-white mt-1">0 €</div>
+            </div>
+            <div class="bg-[#141518] border border-white/10 rounded-2xl p-4">
+              <div class="text-xs text-zinc-400">Hotovostní účtenky</div>
+              <div id="out-receipts" class="text-2xl font-bold text-orange-300 mt-1">0 €</div>
+            </div>
+            <div class="bg-[#141518] border border-orange-500/40 rounded-2xl p-4">
+              <div id="lbl-settlement" class="text-xs text-orange-300">Doplatek řidiči</div>
+              <div id="d-total" class="text-2xl font-extrabold text-white mt-1">0 €</div>
+              <div id="d-total-czk" class="text-xs text-zinc-400">0 Kč</div>
+            </div>
+          </div>
+
+          <div id="d-list" class="space-y-2.5 text-sm"></div>
+
+          <div class="flex flex-wrap gap-2.5 pt-3 border-t border-white/10 no-print">
+            <button onclick="copyDietReport()" id="btn-copy-diet" class="trukon-btn text-sm px-5 py-3 rounded-xl transition">
+              📋 Zkopírovat pro účetní
+            </button>
+            <button onclick="window.print()" class="bg-white/10 hover:bg-white/15 text-white text-sm font-semibold px-5 py-3 rounded-xl transition">
+              🖨️ Tisk PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+    let pendingPhoto = false;
+    let days = [
+      { country: "Německo", base: 45, hours: 16, exp: 18, cat: "Parkovné", time: "Po 06:20", hasPhoto: true },
+      { country: "Francie", base: 45, hours: 24, exp: 42, cat: "Mýto / Tunel", time: "Út 08:15", hasPhoto: true },
+      { country: "Německo", base: 45, hours: 11, exp: 0, cat: "", time: "St 14:40", hasPhoto: false }
+    ];
+
+    function onReceiptPhoto(e) {
+      if (e.target.files && e.target.files[0]) {
+        pendingPhoto = true;
+        document.getElementById("photo-status").textContent = "✓ Fotka přiložena";
+      }
+    }
+
+    function quickBorder(country, base) {
+      const now = new Date();
+      const stamp = now.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
+      days.push({ country, base, hours: 14, exp: 0, cat: "", time: `Dnes ${stamp}`, hasPhoto: false });
+      renderDays();
+    }
+
+    function calcAllowance(base, h) {
+      if (h > 18) return base;
+      if (h > 12) return Math.round((base * 2) / 3 * 100) / 100;
+      if (h >= 1) return Math.round((base / 3) * 100) / 100;
+      return 0;
+    }
+
+    function addDay() {
+      const [baseStr, country] = document.getElementById("d-country").value.split("|");
+      const hours = Number(document.getElementById("d-hours").value) || 0;
+      const exp = Number(document.getElementById("d-exp").value) || 0;
+      const cat = exp > 0 ? document.getElementById("d-cat").value : "";
+      const now = new Date().toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
+      days.push({ country, base: Number(baseStr), hours, exp, cat, time: `Zapsáno ${now}`, hasPhoto: pendingPhoto });
+      pendingPhoto = false;
+      document.getElementById("photo-status").textContent = "";
+      document.getElementById("d-exp").value = 0;
+      renderDays();
+    }
+
+    function removeDay(i) {
+      days.splice(i, 1);
+      renderDays();
+    }
+
+    window.onRateLoaded = renderDays;
+
+    function renderDays() {
+      let sumDiets = 0, sumReceipts = 0;
+      const list = document.getElementById("d-list");
+      const withPocket = document.getElementById("d-pocket").checked;
+      const advance = Number(document.getElementById("d-advance").value) || 0;
+
+      list.innerHTML = days.map((d, i) => {
+        const allowance = calcAllowance(d.base, d.hours);
+        const pocket = withPocket ? Math.round(allowance * 0.4 * 10) / 10 : 0;
+        const dayDiet = allowance + pocket;
+        sumDiets += dayDiet;
+        sumReceipts += d.exp;
+        const rowTotal = dayDiet + d.exp;
+
+        return `
+          <div class="flex items-center justify-between bg-[#141518] border border-white/10 rounded-2xl px-4 py-3 gap-2">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-bold text-white">${i + 1}. ${d.country} (${d.hours} h)</span>
+                ${d.time ? `<span class="text-xs text-zinc-400">🕒 ${d.time}</span>` : ''}
+                ${d.hasPhoto ? `<span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">📷 Účtenka</span>` : ''}
+              </div>
+              <div class="text-xs text-zinc-300 mt-0.5">
+                Dieta ${dayDiet.toFixed(1)} € ${d.exp > 0 ? `• Hotově ${d.exp} € (${d.cat})` : ''}
+              </div>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <span class="font-bold text-white">${rowTotal.toFixed(1)} €</span>
+              <button onclick="removeDay(${i})" class="text-zinc-400 hover:text-red-400 no-print">✕</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      const netToDriver = sumDiets + sumReceipts - advance;
+      document.getElementById("out-diets").textContent = `${sumDiets.toFixed(1)} €`;
+      document.getElementById("out-receipts").textContent = `${sumReceipts.toFixed(1)} €`;
+
+      const lblSet = document.getElementById("lbl-settlement");
+      const totEl = document.getElementById("d-total");
+      if (netToDriver >= 0) {
+        lblSet.textContent = `Doplatit řidiči (po záloze ${advance} €)`;
+        totEl.textContent = `+${netToDriver.toFixed(1)} €`;
+        totEl.className = "text-2xl font-extrabold text-emerald-400 mt-1";
+      } else {
+        lblSet.textContent = `Řidič vrací ze zálohy (${advance} €)`;
+        totEl.textContent = `${netToDriver.toFixed(1)} €`;
+        totEl.className = "text-2xl font-extrabold text-orange-300 mt-1";
+      }
+      document.getElementById("d-total-czk").textContent = `cca ${Math.round(Math.abs(netToDriver) * window.APP.eurRate).toLocaleString("cs-CZ")} Kč`;
+    }
+
+    function copyDietReport() {
+      const advance = Number(document.getElementById("d-advance").value) || 0;
+      const diets = document.getElementById("out-diets").textContent;
+      const rec = document.getElementById("out-receipts").textContent;
+      const net = document.getElementById("d-total").textContent;
+      const lines = days.map((d, i) => `${i + 1}. ${d.country} (${d.hours} h) — dieta ${calcAllowance(d.base, d.hours)} €${d.exp ? ` + hotově ${d.exp} € (${d.cat})` : ''}`);
+      navigator.clipboard.writeText(
+        `Vyúčtování cesty:\n${lines.join("\n")}\nDiety: ${diets} | Účtenky: ${rec} | Záloha: ${advance} € | Výsledek: ${net}`
+      );
+      const b = document.getElementById("btn-copy-diet");
+      b.textContent = "✓ Zkopírováno";
+      setTimeout(() => b.textContent = "📋 Zkopírovat pro účetní", 2000);
+    }
+
+    renderDays();
+  </script>
+</body>
+</html>

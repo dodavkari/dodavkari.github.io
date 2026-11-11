@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Čtečka objednávek + ARES + CMR — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', -apple-system, sans-serif; background-color: #0a0a0c; color: #f4f4f6; }
+    .font-mono-num { font-family: 'JetBrains Mono', monospace; }
+    @media print {
+      body * { visibility: hidden; }
+      #cmr-print-sheet, #cmr-print-sheet * { visibility: visible; }
+      #cmr-print-sheet { position: absolute; left: 0; top: 0; width: 100%; background: white !important; color: black !important; }
+    }
+  </style>
+  <script>location.replace("spedice-check.html");</script>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-5xl mx-auto px-5 pt-8 pb-24 flex-1 w-full">
+
+    <div class="mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Čtečka objednávek + Prověrka ARES + Tisk CMR</h1>
+      <p class="text-sm text-zinc-400 mt-1">
+        Vlož text objednávky od spedice (nebo zadej IČO). Systém živě ověří firmu v registru ARES, spočítá datum splatnosti, založí kartu v nástěnce a vytiskne vyplněné CMR.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEVÁ ČÁST: Vložení objednávky + Živá prověrka IČO v ARES -->
+      <div class="lg:col-span-5 bg-[#141417] border border-zinc-800 rounded-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-white">1. Vlož text z PDF objednávky / e-mailu</span>
+          <button onclick="loadSampleOrder()" class="text-xs text-amber-400 hover:underline">Vložit vzor</button>
+        </div>
+
+        <textarea id="ord-raw" rows="5" oninput="parseOrderText()"
+                  class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-200 font-mono-num"
+                  placeholder="Zkopíruj sem text z PDF objednávky (Ctrl+V)..."></textarea>
+
+        <!-- Živé ověření IČO přes státní registr ARES -->
+        <div class="pt-3 border-t border-zinc-800 space-y-2">
+          <label class="block text-xs font-semibold text-white">2. Živé ověření spedice v registru ARES (podle IČO)</label>
+          <div class="flex gap-2">
+            <input type="text" id="ares-ico" value="00006947" placeholder="Zadej IČO (např. 27082440)"
+                   class="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-white font-mono-num">
+            <button onclick="checkAres()" id="btn-ares" class="bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold px-4 rounded-xl transition">
+              Ověřit v ARES
+            </button>
+          </div>
+          <div id="ares-result" class="text-xs text-zinc-400 bg-zinc-900/90 border border-zinc-800 rounded-xl p-3">
+            Klikni na „Ověřit v ARES“ pro načtení oficiálního názvu, DIČ a sídla z Ministerstva financí.
+          </div>
+        </div>
+      </div>
+
+      <!-- PRAVÁ ČÁST: Vytěžená data + 1-Click do Kanbanu + Tisk CMR -->
+      <div class="lg:col-span-7 space-y-4">
+        <div class="bg-[#141417] border border-zinc-800 rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white">Vytěžená přepravní karta</h2>
+            <span id="due-badge" class="text-xs font-mono-num bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full"></span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block text-zinc-400 mb-1">Objednávající spedice</label>
+              <input type="text" id="p-cust" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white font-semibold">
+            </div>
+            <div>
+              <label class="block text-zinc-400 mb-1">Cena a Splatnost (dní)</label>
+              <div class="flex gap-2">
+                <input type="number" id="p-eur" class="w-1/2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-emerald-400 font-bold">
+                <input type="number" id="p-maturity" value="60" oninput="updateDueDate()" class="w-1/2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white">
+              </div>
+            </div>
+            <div>
+              <label class="block text-zinc-400 mb-1">▲ Místo nakládky</label>
+              <input type="text" id="p-from" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white">
+            </div>
+            <div>
+              <label class="block text-zinc-400 mb-1">▼ Místo vykládky</label>
+              <input type="text" id="p-to" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white">
+            </div>
+            <div>
+              <label class="block text-zinc-400 mb-1">Náklad (Palety a váha)</label>
+              <input type="text" id="p-cargo" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white">
+            </div>
+            <div>
+              <label class="block text-zinc-400 mb-1">Číslo objednávky zákazníka</label>
+              <input type="text" id="p-ref" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white font-mono-num">
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2.5 pt-3 border-t border-zinc-800">
+            <button onclick="sendToKanban()" id="btn-to-kanban" class="flex-1 bg-white hover:bg-zinc-200 text-black font-bold text-xs py-3 px-4 rounded-xl transition">
+              📋 Poslat rovnou do Dispečerské nástěnky →
+            </button>
+            <button onclick="printFilledCmr()" class="bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs py-3 px-4 rounded-xl transition">
+              🖨️ Vytisknout předvyplněné CMR
+            </button>
+          </div>
+        </div>
+
+        <!-- Skrytá šablona CMR pro tisk -->
+        <div id="cmr-print-sheet" class="hidden p-8 border-2 border-black text-xs space-y-4">
+          <h2 class="text-xl font-bold border-b-2 border-black pb-2">MEZINÁRODNÍ NÁKLADNÍ LIST (CMR)</h2>
+          <div><strong>1. Odesílatel / Místo nakládky:</strong> <span id="cmr-from"></span></div>
+          <div><strong>2. Příjemce / Místo vykládky:</strong> <span id="cmr-to"></span></div>
+          <div><strong>6. Označení nákladu, počet palet a váha:</strong> <span id="cmr-cargo"></span></div>
+          <div><strong>16. Dopravce (Auto / SPZ):</strong> <span id="cmr-van"></span></div>
+          <div class="pt-16 flex justify-between">
+            <div>___________________________<br>Podpis a razítko odesílatele</div>
+            <div>___________________________<br>Podpis řidiče</div>
+            <div>___________________________<br>Potvrzení vykládky (Příjemce)</div>
+          </div>
+        </div>
+
+        <!-- "To bych chtěl" -->
+        <div class="bg-[#141417]/60 border border-zinc-800/60 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
+              <span>🔒</span> <span>Automatický e-mailový robot + Fakturoid / iDoklad</span>
+            </div>
+            <p class="text-xs text-zinc-300 leading-relaxed">
+              Chtěl bys vlastní firemní e-mail, kam jen přepošleš PDF objednávku a sama se založí v nástěnce i ve tvém Fakturoidu / iDokladu?
+            </p>
+          </div>
+          <button onclick="window.APP.openWantModal('Automatické vyčítání PDF objednávek z e-mailu do nástěnky a fakturace')"
+                  class="shrink-0 px-5 py-3 rounded-2xl text-sm font-semibold trukon-btn transition">
+            Napište mi na WhatsApp
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    function loadSampleOrder() {
+      document.getElementById("ord-raw").value =
+        `OBJEDNÁVKA PŘEPRAVY č. OBJ-2026-8841\n` +
+        `Objednatel: Schenker spol. s r.o., IČO: 45314251\n` +
+        `Nakládka: CZ 30100 Plzeň, Borská pole (25.03. 08:00)\n` +
+        `Vykládka: DE 68159 Mannheim, Hafenstr. 12 (26.03. 07:00)\n` +
+        `Zboží: 8 EUR palet, 790 kg, autodíly\n` +
+        `Smluvní cena: 1 080 EUR bez DPH, splatnost 60 dní`;
+      document.getElementById("ares-ico").value = "45314251";
+      parseOrderText();
+      checkAres();
+    }
+
+    function parseOrderText() {
+      const t = document.getElementById("ord-raw").value;
+      const ico = t.match(/IČO[:\s]*(\d{8})/i);
+      if (ico) document.getElementById("ares-ico").value = ico[1];
+
+      const eur = t.match(/(\d[\d\s]*)\s*EUR/i);
+      if (eur) document.getElementById("p-eur").value = eur[1].replace(/\s/g, "");
+
+      const mat = t.match(/splatnost\s*(\d{2})\s*dn/i);
+      if (mat) document.getElementById("p-maturity").value = mat[1];
+
+      const nakl = t.match(/Nakládka:\s*([^\n]+)/i);
+      if (nakl) document.getElementById("p-from").value = nakl[1].trim();
+
+      const vykl = t.match(/Vykládka:\s*([^\n]+)/i);
+      if (vykl) document.getElementById("p-to").value = vykl[1].trim();
+
+      const zbozi = t.match(/Zboží:\s*([^\n]+)/i);
+      if (zbozi) document.getElementById("p-cargo").value = zbozi[1].trim();
+
+      const ref = t.match(/OBJ-[\w-]+/i);
+      if (ref) document.getElementById("p-ref").value = ref[0];
+
+      updateDueDate();
+    }
+
+    function updateDueDate() {
+      const days = Number(document.getElementById("p-maturity").value) || 60;
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      document.getElementById("due-badge").textContent = `Peníze na účtu: ${d.toLocaleDateString("cs-CZ")} (${days} dní)`;
+    }
+
+    // Živý dotaz do vládního registru ARES (Ministerstvo financí ČR)
+    async function checkAres() {
+      const ico = document.getElementById("ares-ico").value.trim();
+      const box = document.getElementById("ares-result");
+      box.textContent = "⏳ Ověřuji IČO v databázi ARES...";
+      try {
+        const res = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
+        if (!res.ok) throw new Error("Subjekt nenalezen");
+        const data = await res.json();
+        const name = data.obchodniJmeno || "Neznámá firma";
+        const dic = data.dic || "Neplátce / neuvedeno";
+        const sidlo = data.sidlo?.textovaAdresa || "";
+
+        document.getElementById("p-cust").value = name;
+        box.innerHTML = `
+          <div class="text-emerald-400 font-bold">✓ Ověřeno v ARES: ${name}</div>
+          <div class="text-zinc-300 mt-1">DIČ: <strong>${dic}</strong> • Sídlo: ${sidlo}</div>
+        `;
+      } catch (e) {
+        box.innerHTML = `<span class="text-red-400">⚠️ IČO ${ico} nebylo v ARES nalezeno (nebo jste offline).</span>`;
+      }
+    }
+
+    // 1-Click odeslání vytěžené objednávky přímo do Kanban nástěnky!
+    function sendToKanban() {
+      const saved = JSON.parse(localStorage.getItem("dodavkari_kanban_clean_v4") || "null");
+      if (saved) {
+        saved.cards.unshift({
+          id: "c-" + Date.now(),
+          colId: saved.columns[0].id,
+          code: document.getElementById("p-ref").value || "Nová obj.",
+          loaded: false,
+          loadDate: "Dle obj.",
+          unloadDate: "Dle obj.",
+          customer: document.getElementById("p-cust").value,
+          eur: Number(document.getElementById("p-eur").value) || 0,
+          firmN: "", addrN: "", cityN: document.getElementById("p-from").value,
+          firmV: "", addrV: "", cityV: document.getElementById("p-to").value,
+          pal: document.getElementById("p-cargo").value, kg: "",
+          van: saved.fleet[0]?.code || "Master #1", transship: "", palletsDebt: "Výměna EUR"
+        });
+        localStorage.setItem("dodavkari_kanban_clean_v4", JSON.stringify(saved));
+      }
+      const btn = document.getElementById("btn-to-kanban");
+      btn.textContent = "✓ Uloženo do nástěnky! Otevírám dispečink...";
+      setTimeout(() => location.href = "dispecink.html", 900);
+    }
+
+    function printFilledCmr() {
+      document.getElementById("cmr-from").textContent = document.getElementById("p-from").value;
+      document.getElementById("cmr-to").textContent = document.getElementById("p-to").value;
+      document.getElementById("cmr-cargo").textContent = document.getElementById("p-cargo").value;
+      document.getElementById("cmr-van").textContent = window.APP.getActiveVan().name;
+      window.print();
+    }
+
+    loadSampleOrder();
+  </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nastavení vzhledu a pozadí — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-24 flex-1 w-full space-y-6">
+
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Nastavení pozadí a efektů</h1>
+        <p class="text-sm text-zinc-300 mt-1">
+          Uprav globální obrázek na pozadí, tmavý přechod, míru rozmazání (blur) nebo nastav vlastní obrázek pro jednotlivé stránky.
+        </p>
+      </div>
+      <button onclick="resetBgConfig()" class="text-xs bg-white/10 hover:bg-white/15 text-zinc-200 px-4 py-2 rounded-xl">
+        Obnovit výchozí
+      </button>
+    </div>
+
+    <div class="trukon-card rounded-3xl p-6 space-y-5">
+      <div class="flex items-center justify-between">
+        <span class="text-base font-bold text-white">1. Globální pozadí a rozmazání</span>
+        <label class="flex items-center gap-2 text-sm text-zinc-200 cursor-pointer">
+          <input type="checkbox" id="bg-enabled" onchange="saveAndPreview()" class="w-4 h-4 accent-orange-500">
+          <span>Zapnout obrázek na pozadí</span>
+        </label>
+      </div>
+
+      <div>
+        <label class="block text-xs text-zinc-400 mb-1">Výchozí URL obrázku pro celý web</label>
+        <input type="text" id="bg-default-url" oninput="saveAndPreview()"
+               class="w-full bg-[#141518] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        <div>
+          <div class="flex justify-between text-xs text-zinc-300 mb-1">
+            <span>Horní ztmavení (rgba)</span>
+            <strong id="lbl-top-a">0.85</strong>
+          </div>
+          <input type="range" id="bg-top-a" min="0.2" max="0.98" step="0.02" oninput="saveAndPreview()" class="w-full accent-orange-500">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs text-zinc-300 mb-1">
+            <span>Spodní ztmavení (rgba)</span>
+            <strong id="lbl-bot-a">0.65</strong>
+          </div>
+          <input type="range" id="bg-bot-a" min="0.2" max="0.98" step="0.02" oninput="saveAndPreview()" class="w-full accent-orange-500">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs text-zinc-300 mb-1">
+            <span>Rozmazání (Blur px)</span>
+            <strong id="lbl-blur">6 px</strong>
+          </div>
+          <input type="range" id="bg-blur" min="0" max="24" step="1" oninput="saveAndPreview()" class="w-full accent-orange-500">
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-Page URL -->
+    <div class="trukon-card-subtle rounded-3xl p-6 space-y-4">
+      <div>
+        <h2 class="text-base font-bold text-white">2. Vlastní obrázek pozadí pro konkrétní stránky (volitelné)</h2>
+        <p class="text-xs text-zinc-400 mt-0.5">Pokud necháš pole prázdné, stránka použije výchozí globální obrázek nahoře.</p>
+      </div>
+      <div id="per-page-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs"></div>
+    </div>
+
+    <!-- Export do shared.js -->
+    <div class="trukon-card-subtle rounded-3xl p-6 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-bold text-white">3. Zkopírovat nastavení natvrdo do shared.js</span>
+        <button onclick="copyConfigCode(this)" class="trukon-btn text-xs px-4 py-2 rounded-xl">Zkopírovat kód</button>
+      </div>
+      <pre id="config-code-out" class="text-xs bg-[#141518] border border-white/10 rounded-xl p-4 overflow-x-auto text-zinc-300"></pre>
+    </div>
+
+    <!-- 4. Poptávky a kontakty zájemců -->
+    <div class="trukon-card-subtle rounded-3xl p-6 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-white">4. Poptávky a kontakty zájemců</h2>
+          <p class="text-xs text-zinc-400 mt-0.5">Lokální záloha kontaktů odeslaných přes formuláře na tomto zařízení.</p>
+        </div>
+        <button onclick="downloadLeadsCsv()" class="trukon-btn text-xs px-4 py-2.5 rounded-xl transition">
+          Stáhnout do CSV / Excel
+        </button>
+      </div>
+      <div id="leads-list-preview" class="text-xs text-zinc-300 bg-[#141518] border border-white/10 rounded-xl p-4 max-h-64 overflow-y-auto font-mono">
+        Načítání...
+      </div>
+    </div>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    const PAGES = [
+      ["index.html", "Hlavní stránka (index.html)"],
+      ["dispecink.html", "Dispečerská nástěnka (dispecink.html)"],
+      ["rentgen.html", "Vyplatí se to jet? (rentgen.html)"],
+      ["tetris.html", "Paletový Tetris & Váha (tetris.html)"],
+      ["tachograf.html", "Smím tuhle zakázku jet? (tachograf.html)"],
+      ["spedice-check.html", "Prověrka spedice (spedice-check.html)"],
+      ["zakazky.html", "Přímé fabriky (zakazky.html)"],
+      ["trasy.html", "Mapa aut (trasy.html)"],
+      ["sledovani.html", "Sledování a Palety (sledovani.html)"],
+      ["diety.html", "Diety a účtenky (diety.html)"],
+      ["skener.html", "Noční skener CMR (skener.html)"],
+      ["vyplaty.html", "Výplaty řidičů (vyplaty.html)"],
+      ["nafta.html", "Tankovací karty (nafta.html)"],
+      ["upominky.html", "Upomínky (upominky.html)"]
+    ];
+
+    function initForm() {
+      const cfg = window.APP.getBgConfig();
+      document.getElementById("bg-enabled").checked = cfg.enabled;
+      document.getElementById("bg-default-url").value = cfg.defaultImage;
+      document.getElementById("bg-top-a").value = cfg.topAlpha;
+      document.getElementById("bg-bot-a").value = cfg.bottomAlpha;
+      document.getElementById("bg-blur").value = cfg.blurPx;
+
+      document.getElementById("per-page-list").innerHTML = PAGES.map(([file, label]) => `
+        <div>
+          <label class="block text-zinc-400 mb-1">${label}</label>
+          <input type="text" data-page-file="${file}" value="${cfg.pageImages?.[file] || ''}"
+                 placeholder="Výchozí globální obrázek" oninput="saveAndPreview()"
+                 class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+        </div>
+      `).join("");
+
+      updateLabelsAndCode(cfg);
+    }
+
+    function saveAndPreview() {
+      const pageImages = {};
+      document.querySelectorAll("[data-page-file]").forEach(inp => {
+        pageImages[inp.getAttribute("data-page-file")] = inp.value.trim();
+      });
+
+      const cfg = {
+        enabled: document.getElementById("bg-enabled").checked,
+        defaultImage: document.getElementById("bg-default-url").value.trim(),
+        topAlpha: Number(document.getElementById("bg-top-a").value),
+        bottomAlpha: Number(document.getElementById("bg-bot-a").value),
+        blurPx: Number(document.getElementById("bg-blur").value),
+        pageImages
+      };
+
+      localStorage.setItem("dodavkari_bg_config_v1", JSON.stringify(cfg));
+      window.APP.applyBackgroundLayer();
+      updateLabelsAndCode(cfg);
+    }
+
+    function updateLabelsAndCode(cfg) {
+      document.getElementById("lbl-top-a").textContent = cfg.topAlpha;
+      document.getElementById("lbl-bot-a").textContent = cfg.bottomAlpha;
+      document.getElementById("lbl-blur").textContent = `${cfg.blurPx} px`;
+      document.getElementById("config-code-out").textContent =
+        `window.BG_DEFAULT_CONFIG = ${JSON.stringify(cfg, null, 2)};`;
+    }
+
+    function resetBgConfig() {
+      localStorage.removeItem("dodavkari_bg_config_v1");
+      initForm();
+      window.APP.applyBackgroundLayer();
+    }
+
+    function copyConfigCode(btn) {
+      navigator.clipboard.writeText(document.getElementById("config-code-out").textContent);
+      btn.textContent = "✓ Zkopírováno";
+      setTimeout(() => btn.textContent = "Zkopírovat kód", 2000);
+    }
+
+    function renderLeadsList() {
+      const box = document.getElementById("leads-list-preview");
+      if (!box) return;
+      const leads = JSON.parse(localStorage.getItem("dodavkari_saved_leads") || "[]");
+      if (leads.length === 0) {
+        box.innerHTML = `<span class="text-zinc-500">Zatím nebyly na tomto zařízení odeslány žádné poptávky.</span>`;
+        return;
+      }
+      box.innerHTML = leads.map((l, i) => `
+        <div class="py-2 ${i > 0 ? 'border-t border-white/10' : ''}">
+          <div class="flex justify-between text-zinc-400 text-[11px]">
+            <span>${new Date(l.date).toLocaleString('cs-CZ')}</span>
+            <span class="text-orange-400 font-semibold">${l.contactPreference || 'WhatsApp'}</span>
+          </div>
+          <div class="text-white font-bold text-sm mt-0.5">${l.name} • <span class="text-zinc-300 font-normal">${l.phone}</span></div>
+          <div class="text-zinc-300 text-xs">${l.topic} ${l.company ? `(${l.company})` : ''} • ${l.van || ''}</div>
+        </div>
+      `).reverse().join("");
+    }
+
+    function downloadLeadsCsv() {
+      const leads = JSON.parse(localStorage.getItem("dodavkari_saved_leads") || "[]");
+      if (leads.length === 0) {
+        alert("Zatím nejsou uloženy žádné poptávky.");
+        return;
+      }
+      const header = ["Datum", "Téma", "Jméno", "Telefon", "Firma", "Auto", "Způsob kontaktu"];
+      const rows = leads.map(l => [
+        `"${new Date(l.date).toLocaleString('cs-CZ')}"`,
+        `"${(l.topic || '').replace(/"/g, '""')}"`,
+        `"${(l.name || '').replace(/"/g, '""')}"`,
+        `"${(l.phone || '').replace(/"/g, '""')}"`,
+        `"${(l.company || '').replace(/"/g, '""')}"`,
+        `"${(l.van || '').replace(/"/g, '""')}"`,
+        `"${(l.contactPreference || '').replace(/"/g, '""')}"`
+      ]);
+      const csvContent = "\uFEFF" + [header.join(";"), ...rows.map(r => r.join(";"))].join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `poptavky_dodavkari_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    initForm();
+    renderLeadsList();
+  </script>
+</body>
+</html>

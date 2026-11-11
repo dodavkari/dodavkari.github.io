@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prověrka spedice & CMR — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #cmr-print-sheet, #cmr-print-sheet * { visibility: visible; }
+      #cmr-print-sheet { position: absolute; left: 0; top: 0; width: 100%; display: block !important; background: white !important; color: black !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<main class="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-20 flex-1 w-full">
+
+  <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Prověrka spedice</h1>
+      <p class="text-base text-zinc-300 mt-1">Zadej IČO nebo název firmy. Ověří ARES, stáří firmy, DPH a připraví CMR.</p>
+    </div>
+    <button onclick="loadSampleOrder()" class="self-start text-sm font-semibold text-orange-300 hover:text-orange-200 bg-orange-500/15 border border-orange-500/30 px-4 py-2 rounded-xl transition">
+      Ukázková objednávka
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- LEVÝ SLOUPEC: Zadání -->
+    <div class="lg:col-span-5 space-y-5">
+
+      <div class="trukon-card rounded-3xl p-6 space-y-4">
+
+        <div>
+          <label class="block text-sm font-medium text-zinc-300 mb-1.5">IČO nebo název spedice</label>
+          <div class="flex gap-2">
+            <input type="text" id="ico" placeholder="např. 45314251 nebo Schenker"
+                   onkeydown="if(event.key==='Enter')runCheck()"
+                   class="flex-1 bg-[#141518] border border-white/15 focus:border-orange-500 rounded-xl px-4 py-3 text-base text-white focus:outline-none">
+            <button onclick="runCheck()" id="btn-check" class="trukon-btn text-base px-5 rounded-xl transition shrink-0">
+              Prověřit
+            </button>
+          </div>
+          <div id="name-results" class="hidden mt-2 space-y-1.5"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm text-zinc-300 mb-1">Cena přepravy (EUR)</label>
+            <input type="number" id="eur" value="1100" oninput="if(cur)render()"
+                   class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base font-bold text-white focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-sm text-zinc-300 mb-1">Splatnost (dní)</label>
+            <input type="number" id="days" value="60" oninput="if(cur)render()"
+                   class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base font-bold text-white focus:outline-none">
+          </div>
+        </div>
+
+        <details id="ord-details" class="pt-3 border-t border-white/10 text-sm">
+          <summary class="cursor-pointer text-zinc-300 hover:text-white font-semibold py-1 select-none">
+            📄 Vložit text objednávky (vyplní IČO i CMR)
+          </summary>
+          <div class="mt-3 space-y-2.5">
+            <textarea id="raw" rows="4" oninput="parseOrder()" placeholder="Zkopíruj sem text z PDF objednávky..."
+                      class="w-full bg-[#141518] border border-white/15 rounded-xl p-3 text-sm text-zinc-200 focus:outline-none"></textarea>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="p-from" placeholder="▲ Místo nakládky" class="bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+              <input type="text" id="p-to" placeholder="▼ Místo vykládky" class="bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+              <input type="text" id="p-cargo" placeholder="Palety a váha" class="bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+              <input type="text" id="p-ref" placeholder="Č. objednávky" class="bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+            </div>
+          </div>
+        </details>
+
+        <div class="pt-2 border-t border-white/10 flex items-center justify-between text-sm text-zinc-400">
+          <span>Zahraniční spedice v EU?</span>
+          <a class="text-orange-400 hover:underline font-semibold" target="_blank" rel="noopener" href="https://ec.europa.eu/taxation_customs/vies/">Ověřit DIČ ve VIES ↗</a>
+        </div>
+      </div>
+
+      <!-- Historie a neplatiči -->
+      <div class="trukon-card-subtle rounded-3xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm font-bold text-white">Poslední prověrky &amp; neplatiči</span>
+          <button onclick="clearHistory()" class="text-xs text-zinc-400 hover:text-red-400">Smazat</button>
+        </div>
+        <div id="history" class="space-y-2 text-sm"></div>
+      </div>
+
+    </div>
+
+    <!-- PRAVÝ SLOUPEC: Výsledek -->
+    <div class="lg:col-span-7 space-y-5">
+
+      <div id="result" class="trukon-card rounded-3xl p-6 text-base text-zinc-300">
+        Zadej IČO nebo název spedice vlevo a klikni na <strong class="text-white">Prověřit</strong>.
+      </div>
+
+      <div id="manual-card" class="hidden trukon-card-subtle rounded-3xl p-5">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-bold text-white">Rychlé odkazy do registrů (kliknutím se zkopíruje IČO)</span>
+          <span id="manual-count" class="text-xs text-zinc-400"></span>
+        </div>
+        <div id="manual-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3"></div>
+      </div>
+
+      <!-- Skrytá šablona CMR pro tisk -->
+      <div id="cmr-print-sheet" class="hidden p-8 border-2 border-black text-sm space-y-4">
+        <h2 class="text-xl font-bold border-b-2 border-black pb-2">MEZINÁRODNÍ NÁKLADNÍ LIST (CMR)</h2>
+        <div><strong>Objednatel:</strong> <span id="cmr-cust"></span></div>
+        <div><strong>1. Odesílatel / Místo nakládky:</strong> <span id="cmr-from"></span></div>
+        <div><strong>2. Příjemce / Místo vykládky:</strong> <span id="cmr-to"></span></div>
+        <div><strong>6. Označení nákladu, počet palet a váha:</strong> <span id="cmr-cargo"></span></div>
+        <div><strong>16. Dopravce (Auto):</strong> <span id="cmr-van"></span></div>
+        <div class="pt-16 flex justify-between">
+          <div>___________________________<br>Podpis a razítko odesílatele</div>
+          <div>___________________________<br>Podpis řidiče</div>
+          <div>___________________________<br>Potvrzení vykládky (Příjemce)</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</main>
+
+<script src="shared.js"></script>
+<script>
+  window.APP.mountHeader(false);
+
+  const LS_KEY = "dodavkari_spedice_checks_v1";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  let cur = null;
+  let manual = {};
+
+  function loadHist() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch (e) { return []; } }
+  function saveHist(a) { try { localStorage.setItem(LS_KEY, JSON.stringify(a.slice(0, 30))); } catch (e) {} }
+  function findHist(ico) { return loadHist().find((x) => x.ico === ico); }
+
+  function upsertHist(patch) {
+    const h = loadHist();
+    const i = h.findIndex((x) => x.ico === patch.ico);
+    const rec = { ...(i >= 0 ? h[i] : {}), ...patch, date: new Date().toISOString().slice(0, 10) };
+    if (i >= 0) h.splice(i, 1);
+    h.unshift(rec);
+    saveHist(h);
+    renderHistory();
+  }
+
+  function clearHistory() {
+    if (confirm("Vymazat historii prověrek?")) { saveHist([]); renderHistory(); }
+  }
+
+  function renderHistory() {
+    const h = loadHist();
+    const dot = { red: "bg-red-500", amber: "bg-amber-400", ok: "bg-emerald-500" };
+    $("history").innerHTML = h.length ? h.map((x) => `
+      <button onclick="$('ico').value='${esc(x.ico)}';runCheck()" class="w-full flex items-center justify-between gap-2 bg-[#141518] border ${x.bad ? 'border-red-700' : 'border-white/10'} hover:border-orange-500/50 rounded-xl px-3.5 py-2.5 text-left transition">
+        <span class="flex items-center gap-2.5 min-w-0">
+          <span class="w-2.5 h-2.5 rounded-full shrink-0 ${x.bad ? 'bg-red-500' : (dot[x.level] || 'bg-zinc-600')}"></span>
+          <span class="truncate text-white font-medium">${esc(x.name || x.ico)}</span>
+        </span>
+        <span class="shrink-0 text-xs ${x.bad ? 'text-red-400 font-bold' : 'text-zinc-400'}">${x.bad ? 'NEPLATIČ' : esc(x.ico)}</span>
+      </button>`).join("") : `<div class="text-zinc-400">Zatím žádné uložené firmy.</div>`;
+  }
+
+  function loadSampleOrder() {
+    $("ord-details").open = true;
+    $("raw").value =
+      `OBJEDNÁVKA PŘEPRAVY č. OBJ-2026-8841\n` +
+      `Objednatel: Schenker spol. s r.o., IČO: 45314251\n` +
+      `Nakládka: CZ 30100 Plzeň, Borská pole\n` +
+      `Vykládka: DE 68159 Mannheim, Hafenstr. 12\n` +
+      `Zboží: 8 EUR palet, 790 kg, autodíly\n` +
+      `Smluvní cena: 1 080 EUR bez DPH, splatnost 60 dní`;
+    parseOrder();
+    runCheck();
+  }
+
+  function parseOrder() {
+    const t = $("raw").value;
+    const ico = t.match(/IČO?[:\s]*([\d\s]{6,10})/i);
+    if (ico) $("ico").value = ico[1].replace(/\s/g, "");
+    const eur = t.match(/(\d[\d\s]*)\s*EUR/i);
+    if (eur) $("eur").value = eur[1].replace(/\s/g, "");
+    const mat = t.match(/splatnost\w*\s*(\d{2,3})/i);
+    if (mat) $("days").value = mat[1];
+    const nakl = t.match(/Nakládka:\s*([^\n]+)/i);
+    if (nakl) $("p-from").value = nakl[1].trim();
+    const vykl = t.match(/Vykládka:\s*([^\n]+)/i);
+    if (vykl) $("p-to").value = vykl[1].trim();
+    const zbozi = t.match(/Zboží:\s*([^\n]+)/i);
+    if (zbozi) $("p-cargo").value = zbozi[1].trim();
+    const ref = t.match(/OBJ-[\w-]+/i);
+    if (ref) $("p-ref").value = ref[0];
+  }
+
+  function validIco(ico) {
+    if (!/^\d{8}$/.test(ico)) return false;
+    let a = 0;
+    for (let i = 0; i < 7; i++) a += Number(ico[i]) * (8 - i);
+    a %= 11;
+    let c = 11 - a;
+    if (c === 10) c = 0;
+    if (c === 11) c = 1;
+    return c === Number(ico[7]);
+  }
+
+  function monthsSince(iso) {
+    const d = new Date(iso), n = new Date();
+    return (n.getFullYear() - d.getFullYear()) * 12 + (n.getMonth() - d.getMonth());
+  }
+  const czDate = (iso) => iso ? new Date(iso).toLocaleDateString("cs-CZ") : "";
+  const FORMS = { "101": "OSVČ", "112": "s.r.o.", "121": "a.s.", "111": "v.o.s.", "205": "Družstvo" };
+
+  async function searchAresByName(query) {
+    const box = $("name-results");
+    box.classList.remove("hidden");
+    box.innerHTML = `<div class="text-sm text-zinc-300 py-1">Hledám „${esc(query)}“ v ARES...</div>`;
+    try {
+      const res = await fetch("https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ obchodniJmeno: query, start: 0, pocet: 5 })
+      });
+      const data = await res.json();
+      const list = data.ekonomickeSubjekty || [];
+      if (!list.length) {
+        box.innerHTML = `<div class="text-sm text-orange-300 py-1">Firma nenalezena. Zkus zadat 8místné IČO.</div>`;
+        return;
+      }
+      box.innerHTML = list.map(s => `
+        <button onclick="$('ico').value='${esc(s.ico)}';$('name-results').classList.add('hidden');runCheck()"
+                class="w-full text-left text-sm bg-[#141518] hover:bg-zinc-800 border border-white/10 rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2 transition">
+          <span class="text-white font-semibold truncate">${esc(s.obchodniJmeno)}</span>
+          <span class="text-zinc-400 shrink-0">IČO ${esc(s.ico)}</span>
+        </button>
+      `).join("");
+    } catch (e) {
+      box.innerHTML = `<div class="text-sm text-red-400 py-1">Vyhledávání podle názvu teď neodpovídá. Zadej IČO.</div>`;
+    }
+  }
+
+  async function runCheck() {
+    let rawInput = $("ico").value.trim();
+    const cleanedDigits = rawInput.replace(/\s/g, "");
+    $("name-results").classList.add("hidden");
+
+    if (rawInput.length >= 3 && !/^\d+$/.test(cleanedDigits)) {
+      return searchAresByName(rawInput);
+    }
+
+    let ico = cleanedDigits;
+    const box = $("result");
+    manual = {};
+
+    if (!/^\d{6,8}$/.test(ico)) {
+      box.innerHTML = `<span class="text-red-400">Zadej platné 8místné IČO nebo název firmy.</span>`;
+      $("manual-card").classList.add("hidden");
+      return;
+    }
+    ico = ico.padStart(8, "0");
+    $("ico").value = ico;
+    $("btn-check").textContent = "...";
+    box.innerHTML = `<span class="text-zinc-300">Ověřuji IČO ${esc(ico)} v ARES...</span>`;
+
+    const flags = [];
+    let facts = null, name = ico;
+
+    if (!validIco(ico)) {
+      flags.push({ w: 6, crit: true, text: "Neplatné IČO", why: "Nesedí kontrolní součet číslic." });
+    }
+
+    let ares = null, aresError = false;
+    if (flags.length === 0) {
+      try {
+        const res = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
+        if (res.status === 404) {
+          flags.push({ w: 6, crit: true, text: "IČO v ARES neexistuje", why: "Firma není v registru." });
+        } else if (!res.ok) { aresError = true; }
+        else ares = await res.json();
+      } catch (e) { aresError = true; }
+    }
+
+    if (aresError) {
+      flags.push({ w: 0, crit: false, text: "ARES je dočasně nedostupný", why: "Použij odkazy na registry níže." });
+    }
+
+    if (ares) {
+      name = ares.obchodniJmeno || ico;
+      const nace = (ares.czNace || []).map(String);
+      facts = {
+        name, ico,
+        dic: ares.dic || "",
+        sidlo: ares.sidlo?.textovaAdresa || "",
+        vznik: ares.datumVzniku || "",
+        zanik: ares.datumZaniku || "",
+        form: FORMS[String(ares.pravniForma)] || ""
+      };
+
+      if (facts.zanik) flags.push({ w: 6, crit: true, text: `Firma zanikla (${czDate(facts.zanik)})`, why: "Objednávka je neplatná." });
+
+      if (facts.vznik) {
+        const m = monthsSince(facts.vznik);
+        if (m < 12) flags.push({ w: 4, text: `Nová firma (jen ${m} měs.)`, why: "Čerstvě založené s.r.o. znamená vyšší riziko neplacení." });
+        else if (m < 36) flags.push({ w: 2, text: `Mladá firma (${Math.floor(m / 12)} r. historie)`, why: "Pohlídej kratší splatnost." });
+      }
+
+      if (!facts.dic) flags.push({ w: 3, text: "Není plátce DPH (chybí DIČ)", why: "Běžná spedice je plátcem DPH." });
+
+      const looksTransport = nace.some((c) => /^(49|52)/.test(c));
+      if (nace.length && !looksTransport) flags.push({ w: 1, text: "Nemá v ARES obor doprava / spedice", why: "Ověř, zda nejde o zneužité IČO jiné firmy." });
+    }
+
+    const mine = findHist(ico);
+    if (mine?.bad) flags.push({ w: 6, crit: true, text: `Na tvé černé listině neplatičů`, why: "Tuto firmu sis označil jako neplatiče." });
+
+    const score = flags.reduce((s, f) => s + f.w, 0);
+    const level = flags.some((f) => f.crit) || score >= 6 ? "red" : score >= 2 ? "amber" : "ok";
+    cur = { ico, name, level, flags, facts };
+
+    if (ares) upsertHist({ ico, name, level });
+    $("btn-check").textContent = "Prověřit";
+    render();
+  }
+
+  const MANUAL = [
+    { id: "isir", key: true, text: "Čistý insolvenční rejstřík (ISIR)",
+      link: (c) => ["https://isir.justice.cz/isir/common/index.do", "ISIR ↗"] },
+    { id: "dph", key: false, text: "Spolehlivý plátce DPH",
+      link: (c) => ["https://adisspr.mfcr.cz/dpr/DphReg", "Registr DPH ↗"] },
+    { id: "or", key: false, text: "Jednatel a sídlo v Justici",
+      link: (c) => [`https://or.justice.cz/ias/ui/rejstrik-$firma?ico=${c.ico}`, "Justice.cz ↗"] },
+    { id: "web", key: false, text: "Recenze na Googlu bez varování",
+      link: (c) => [`https://www.google.com/search?q=${encodeURIComponent('"' + c.name + '" neplatí OR recenze')}`, "Google ↗"] },
+    { id: "mail", key: true, text: "E-mail není z freemailu (gmail/seznam)" },
+    { id: "phone", key: true, text: "Telefon sedí s webem firmy" }
+  ];
+
+  function verdict(days, eur) {
+    const keysDone = MANUAL.filter((m) => m.key).every((m) => manual[m.id]);
+    const ageWarn = cur.facts?.vznik && monthsSince(cur.facts.vznik) < 36 && eur >= 1500;
+    if (cur.level === "red") return { c: "red", t: "STOP — Vysoké riziko neplacení", s: "Nejezdi bez platby předem." };
+    if (cur.level === "amber" || ageWarn || days > 90) return { c: "amber", t: "Pozor — vyšší riziko", s: "Mladá firma nebo dlouhá splatnost. Vyžádej kratší splatnost." };
+    if (!keysDone) return { c: "sky", t: "V ARES v pořádku", s: "Pro jistotu ještě odškrtni kontroly níže." };
+    return { c: "ok", t: "Prověřeno — bez varování", s: "Firma prošla kontrolou v ARESu i ručním seznamu." };
+  }
+
+  const TONE = {
+    red:   "bg-red-950/50 border-red-600/70 text-red-100",
+    amber: "bg-amber-950/50 border-amber-500/70 text-amber-100",
+    sky:   "bg-[#141518] border-orange-500/40 text-zinc-100",
+    ok:    "bg-emerald-950/50 border-emerald-500/70 text-emerald-100"
+  };
+
+  function render() {
+    if (!cur) return;
+    const eur = Number($("eur").value) || 0;
+    const days = Number($("days").value) || 60;
+    const v = verdict(days, eur);
+    const f = cur.facts;
+    const bad = findHist(cur.ico)?.bad;
+    const exposureDate = new Date(Date.now() + days * 864e5).toLocaleDateString("cs-CZ");
+    const ageMonths = f?.vznik ? monthsSince(f.vznik) : null;
+    const ageStr = ageMonths !== null ? (ageMonths >= 24 ? `${Math.floor(ageMonths / 12)} let` : `${ageMonths} měs.`) : "—";
+
+    const dynamicFlags = [...cur.flags];
+    if (days > 90) dynamicFlags.push({ w: 2, text: `Splatnost ${days} dní je příliš dlouhá`, why: "Běžná splatnost je 30–60 dní." });
+
+    $("result").className = "trukon-card rounded-3xl p-6 space-y-5";
+    $("result").innerHTML = `
+      <div class="rounded-2xl border p-5 ${TONE[v.c]}">
+        <div class="text-xl font-bold text-white">${esc(v.t)}</div>
+        <div class="text-sm mt-1 opacity-90">${esc(v.s)}</div>
+      </div>
+
+      ${f ? `
+      <div class="space-y-3">
+        <div>
+          <h2 class="text-xl font-bold text-white">${esc(f.name)}</h2>
+          <div class="text-sm text-zinc-400 mt-0.5">${esc(f.sidlo)}</div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 text-sm">
+          <div class="bg-[#141518] border border-white/10 rounded-2xl p-3.5">
+            <div class="text-zinc-400">IČO</div>
+            <div class="font-bold text-white mt-0.5">${esc(f.ico)}</div>
+          </div>
+          <div class="bg-[#141518] border border-white/10 rounded-2xl p-3.5">
+            <div class="text-zinc-400">Stáří firmy</div>
+            <div class="font-bold ${ageMonths < 12 ? 'text-red-400' : 'text-white'} mt-0.5">${esc(ageStr)}</div>
+          </div>
+          <div class="bg-[#141518] border border-white/10 rounded-2xl p-3.5">
+            <div class="text-zinc-400">DIČ (DPH)</div>
+            <div class="font-bold ${f.dic ? 'text-emerald-400' : 'text-amber-400'} mt-0.5">${esc(f.dic || "Neplátce")}</div>
+          </div>
+        </div>
+      </div>` : ""}
+
+      ${dynamicFlags.length ? `
+      <div class="space-y-2">
+        ${dynamicFlags.map((x) => `
+          <div class="bg-[#141518] border ${x.crit ? 'border-red-700' : 'border-white/10'} rounded-2xl px-4 py-3 flex items-start gap-3">
+            <span>${x.crit ? '🛑' : '⚠️'}</span>
+            <div>
+              <div class="text-sm font-bold ${x.crit ? 'text-red-300' : 'text-amber-300'}">${esc(x.text)}</div>
+              <div class="text-sm text-zinc-400">${esc(x.why)}</div>
+            </div>
+          </div>`).join("")}
+      </div>` : `<div class="text-sm text-emerald-400 font-semibold">✓ V ARESu bez varovných signálů.</div>`}
+
+      <div class="bg-[#141518] border border-white/10 rounded-2xl px-4 py-3.5 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span class="text-zinc-300">Částka: <strong class="text-white">${eur.toLocaleString("cs-CZ")} €</strong> (${Math.round(eur * window.APP.eurRate).toLocaleString("cs-CZ")} Kč)</span>
+        <span class="text-zinc-300">Splatnost: <strong class="text-orange-300">${exposureDate}</strong> (${days} dní)</span>
+      </div>
+
+      <!-- Akční tlačítka -->
+      <div class="flex flex-wrap gap-2.5 pt-2 border-t border-white/10">
+        <button onclick="sendToKanban()" id="btn-kanban" class="trukon-btn text-sm px-4 py-2.5 rounded-xl transition">
+          📋 Poslat do nástěnky
+        </button>
+        <button onclick="printCmr()" class="bg-white/10 hover:bg-white/15 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition">
+          🖨️ Tisk CMR
+        </button>
+        <button onclick="exportInvoiceJson()" id="btn-inv-json" class="bg-white/10 hover:bg-white/15 text-orange-300 text-sm font-semibold px-4 py-2.5 rounded-xl transition">
+          ⚡ Podklad k fakturaci
+        </button>
+        <a href="upominky.html?deb=${encodeURIComponent(cur.name)}&amt=${eur}" class="bg-white/10 hover:bg-white/15 text-zinc-200 text-sm font-semibold px-4 py-2.5 rounded-xl transition">
+          ✉️ Upomínka
+        </a>
+        <button onclick="toggleBad()" class="ml-auto text-sm font-semibold px-4 py-2.5 rounded-xl border transition ${bad ? 'border-white/20 text-zinc-300' : 'border-red-700/70 text-red-300 hover:bg-red-950/40'}">
+          ${bad ? "Zrušit neplatiče" : "🚫 Označit neplatiče"}
+        </button>
+      </div>
+      <div id="inv-preview-box" class="hidden bg-[#141518] border border-orange-500/40 rounded-2xl p-4 text-sm space-y-2"></div>`;
+
+    $("manual-card").classList.remove("hidden");
+    $("manual-list").innerHTML = MANUAL.map((m) => {
+      const lk = m.link ? m.link(cur) : null;
+      return `
+      <label class="flex items-center justify-between gap-2 bg-[#141518] border ${manual[m.id] ? 'border-emerald-600/60' : 'border-white/10'} rounded-xl px-3.5 py-2.5 cursor-pointer transition">
+        <span class="flex items-center gap-2.5 text-sm text-zinc-200">
+          <input type="checkbox" ${manual[m.id] ? "checked" : ""} onchange="manual['${m.id}']=this.checked;render()" class="w-4 h-4 accent-orange-500 shrink-0">
+          <span>${esc(m.text)}</span>
+        </span>
+        ${lk ? `<a href="${lk[0]}" target="_blank" rel="noopener" onclick="event.stopPropagation();navigator.clipboard&&navigator.clipboard.writeText('${esc(cur.ico)}')" class="shrink-0 text-xs font-semibold text-orange-400 hover:underline">${esc(lk[1])}</a>` : ""}
+      </label>`;
+    }).join("");
+    $("manual-count").textContent = `${MANUAL.filter((m) => manual[m.id]).length}/${MANUAL.length} hotovo`;
+  }
+
+  function toggleBad() {
+    if (!cur) return;
+    const rec = findHist(cur.ico);
+    upsertHist({ ico: cur.ico, name: cur.name, level: cur.level, bad: !rec?.bad });
+    runCheck();
+  }
+
+  function sendToKanban() {
+    const saved = JSON.parse(localStorage.getItem("dodavkari_kanban_clean_v4") || "null");
+    if (saved) {
+      saved.cards.unshift({
+        id: "c-" + Date.now(),
+        colId: saved.columns[0].id,
+        code: $("p-ref").value || "Objednávka",
+        loaded: false,
+        unloadDate: "Dle obj.",
+        customer: cur?.name || "",
+        eur: Number($("eur").value) || 0,
+        cityN: $("p-from").value || "Dle obj.",
+        cityV: $("p-to").value || "Dle obj.",
+        pal: $("p-cargo").value || "Palety", kg: "",
+        van: saved.fleet[0]?.code || "Master #1", palletsDebt: "Výměna EUR"
+      });
+      localStorage.setItem("dodavkari_kanban_clean_v4", JSON.stringify(saved));
+    }
+    $("btn-kanban").textContent = "✓ V nástěnce";
+    setTimeout(() => location.href = "dispecink.html", 600);
+  }
+
+  function printCmr() {
+    $("cmr-cust").textContent = `${cur?.name || ""} (IČO ${cur?.ico || ""})`;
+    $("cmr-from").textContent = $("p-from").value || "Dle objednávky";
+    $("cmr-to").textContent = $("p-to").value || "Dle objednávky";
+    $("cmr-cargo").textContent = $("p-cargo").value || "Paletové zboží";
+    $("cmr-van").textContent = window.APP.getActiveVan().name;
+    window.print();
+  }
+
+  function exportInvoiceJson() {
+    if (!cur) return;
+    const eur = Number($("eur").value) || 0;
+    const days = Number($("days").value) || 60;
+    const from = $("p-from").value || "Nakládka";
+    const to = $("p-to").value || "Vykládka";
+    const ref = $("p-ref").value || "OBJ-" + new Date().toISOString().slice(0, 10);
+    const czk = Math.round(eur * window.APP.eurRate);
+    const dueDate = new Date(Date.now() + days * 864e5).toISOString().slice(0, 10);
+
+    const payload = {
+      client_name: cur.name,
+      client_registration_no: cur.ico,
+      client_vat_no: cur.facts?.dic || "",
+      client_address: cur.facts?.sidlo || "",
+      order_number: ref,
+      currency: "EUR",
+      exchange_rate: window.APP.eurRate,
+      due_on: dueDate,
+      amount_eur: eur,
+      amount_czk: czk
+    };
+
+    const box = $("inv-preview-box");
+    if (box) {
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <div class="flex items-center justify-between">
+          <strong class="text-orange-300">✓ Podklad k fakturaci připraven</strong>
+          <button onclick="downloadInvoiceFile()" class="text-xs trukon-btn px-3 py-1 rounded-lg">Stáhnout soubor</button>
+        </div>
+        <div class="text-zinc-300 text-xs">
+          Odběratel: ${esc(cur.name)} (IČO ${esc(cur.ico)}, DIČ ${esc(cur.facts?.dic || "—")}) • Částka: <strong>${eur} €</strong> (${czk.toLocaleString("cs-CZ")} Kč) • Splatnost: ${dueDate}
+        </div>
+      `;
+    }
+    navigator.clipboard?.writeText(JSON.stringify(payload, null, 2));
+    window._lastInvoicePayload = payload;
+  }
+
+  function downloadInvoiceFile() {
+    if (!window._lastInvoicePayload) return;
+    const blob = new Blob([JSON.stringify(window._lastInvoicePayload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `faktura-${window._lastInvoicePayload.order_number}.json`;
+    a.click();
+  }
+
+  renderHistory();
+  const urlIco = new URLSearchParams(location.search).get("ico");
+  if (urlIco) { $("ico").value = urlIco; runCheck(); }
+</script>
+</body>
+</html>

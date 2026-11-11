@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Výplaty řidičů & Bonus za naftu — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-24 flex-1 w-full">
+
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Srovnání výplat řidičů &amp; Bonus za naftu</h1>
+        <p class="text-base text-zinc-300 mt-1">
+          Zadej fakturaci, kilometry a spotřebu. Porovnej 3 nejčastější modely odměňování v ČR.
+        </p>
+      </div>
+      <a href="nafta.html" class="self-start text-sm font-semibold text-orange-300 bg-orange-500/15 border border-orange-500/30 px-4 py-2 rounded-xl transition shrink-0">
+        ⛽ Srovnávač tankovacích karet →
+      </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <div class="lg:col-span-5 trukon-card rounded-3xl p-6 space-y-4">
+        <div>
+          <label class="block text-sm text-zinc-300 mb-1">1. Měsíční fakturace auta (Kč bez DPH)</label>
+          <input type="number" id="v-rev" value="185000" oninput="calcPay()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-4 py-3 text-lg font-bold text-white">
+        </div>
+        <div>
+          <label class="block text-sm text-zinc-300 mb-1">2. Najeté kilometry za měsíc (km)</label>
+          <input type="number" id="v-km" value="11500" oninput="calcPay()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-4 py-3 text-lg font-bold text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-zinc-400 mb-1">Norma spotřeby (l/100)</label>
+            <input type="number" step="0.1" id="v-norm" value="11.8" oninput="calcPay()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base font-bold text-white">
+          </div>
+          <div>
+            <label class="block text-xs text-zinc-400 mb-1">Skutečná spotřeba</label>
+            <input type="number" step="0.1" id="v-real" value="10.9" oninput="calcPay()" class="w-full bg-[#141518] border border-emerald-500/50 rounded-xl px-3.5 py-2.5 text-base font-bold text-emerald-400">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 text-sm">
+          <div>
+            <label class="block text-xs text-zinc-400 mb-1">Dní v EU (pro diety)</label>
+            <input type="number" id="v-days" value="18" oninput="calcPay()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2 text-white font-bold">
+          </div>
+          <div>
+            <label class="block text-xs text-zinc-400 mb-1">Cena nafty (Kč/l bez DPH)</label>
+            <input type="number" step="0.5" id="v-fuel-price" value="31.5" oninput="calcPay()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2 text-white font-bold">
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7 space-y-5">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="trukon-card-subtle rounded-3xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="text-sm font-bold text-zinc-300">1. Sazba z km</div>
+              <div class="text-xs text-zinc-400 mt-0.5">4,20 Kč / km</div>
+              <div id="m1-pay" class="text-2xl font-extrabold text-white mt-3">0 Kč</div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/10 text-xs text-zinc-400">
+              Zbude firmě po naftě:<br>
+              <strong id="m1-left" class="text-sm text-white">0 Kč</strong>
+            </div>
+          </div>
+
+          <div class="trukon-card-subtle rounded-3xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="text-sm font-bold text-zinc-300">2. Podíl z obratu</div>
+              <div class="text-xs text-zinc-400 mt-0.5">26 % z fakturace</div>
+              <div id="m2-pay" class="text-2xl font-extrabold text-orange-300 mt-3">0 Kč</div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/10 text-xs text-zinc-400">
+              Zbude firmě po naftě:<br>
+              <strong id="m2-left" class="text-sm text-white">0 Kč</strong>
+            </div>
+          </div>
+
+          <div class="trukon-card rounded-3xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="text-sm font-bold text-orange-300">3. Fix + Diety + Nafta</div>
+              <div class="text-xs text-zinc-300 mt-0.5">Základ + diety + 50 % ušetřené nafty</div>
+              <div id="m3-pay" class="text-2xl font-extrabold text-emerald-400 mt-3">0 Kč</div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/10 text-xs text-zinc-300">
+              Zbude firmě po naftě:<br>
+              <strong id="m3-left" class="text-sm text-emerald-300">0 Kč</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="trukon-card-subtle rounded-3xl p-6 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-base font-bold text-white">⛽ Bonus za úsporu nafty</span>
+            <span id="fuel-liters-diff" class="text-sm font-bold text-emerald-400"></span>
+          </div>
+          <p id="fuel-bonus-desc" class="text-sm text-zinc-300 leading-relaxed"></p>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    function calcPay() {
+      const rev = Number(document.getElementById("v-rev").value) || 0;
+      const km = Number(document.getElementById("v-km").value) || 0;
+      const norm = Number(document.getElementById("v-norm").value) || 11.8;
+      const real = Number(document.getElementById("v-real").value) || 11.8;
+      const days = Number(document.getElementById("v-days").value) || 0;
+      const fuelPrice = Number(document.getElementById("v-fuel-price").value) || 31.5;
+      const eurRate = window.APP?.eurRate || 25.25;
+
+      const normLiters = (km / 100) * norm;
+      const realLiters = (km / 100) * real;
+      const savedLiters = Math.round(normLiters - realLiters);
+      const savedCzk = Math.round(savedLiters * fuelPrice);
+      const driverFuelBonus = Math.round(savedCzk * 0.5);
+
+      const fuelCostReal = Math.round(realLiters * fuelPrice);
+      const fuelCostNorm = Math.round(normLiters * fuelPrice);
+
+      const m1 = Math.round(km * 4.2);
+      const m2 = Math.round(rev * 0.26);
+      const dietyCzk = Math.round(days * 45 * eurRate * 0.85);
+      const m3 = Math.round(24000 + dietyCzk + driverFuelBonus);
+
+      document.getElementById("m1-pay").textContent = `${m1.toLocaleString("cs-CZ")} Kč`;
+      document.getElementById("m2-pay").textContent = `${m2.toLocaleString("cs-CZ")} Kč`;
+      document.getElementById("m3-pay").textContent = `${m3.toLocaleString("cs-CZ")} Kč`;
+
+      document.getElementById("m1-left").textContent = `${(rev - m1 - fuelCostNorm).toLocaleString("cs-CZ")} Kč`;
+      document.getElementById("m2-left").textContent = `${(rev - m2 - fuelCostNorm).toLocaleString("cs-CZ")} Kč`;
+      document.getElementById("m3-left").textContent = `${(rev - m3 - fuelCostReal).toLocaleString("cs-CZ")} Kč`;
+
+      const diffEl = document.getElementById("fuel-liters-diff");
+      const descEl = document.getElementById("fuel-bonus-desc");
+      if (savedLiters >= 0) {
+        diffEl.className = "text-sm font-bold text-emerald-400";
+        diffEl.textContent = `Úspora ${savedLiters} l (${savedCzk.toLocaleString("cs-CZ")} Kč)`;
+        descEl.innerHTML = `Řidič ušetřil oproti normě <strong>${savedLiters} litrů nafty (${savedCzk.toLocaleString("cs-CZ")} Kč)</strong>. Když dostane polovinu do výplaty (<strong>+${driverFuelBonus.toLocaleString("cs-CZ")} Kč</strong>), firmě zůstane čistých <strong>+${(savedCzk - driverFuelBonus).toLocaleString("cs-CZ")} Kč</strong>.`;
+      } else {
+        diffEl.className = "text-sm font-bold text-red-400";
+        diffEl.textContent = `Nadspotřeba ${Math.abs(savedLiters)} l (${Math.abs(savedCzk).toLocaleString("cs-CZ")} Kč)`;
+        descEl.innerHTML = `Řidič překročil normu o <strong>${Math.abs(savedLiters)} litrů</strong> (vícenáklad <strong>${Math.abs(savedCzk).toLocaleString("cs-CZ")} Kč</strong>).`;
+      }
+    }
+
+    calcPay();
+  </script>
+</body>
+</html>

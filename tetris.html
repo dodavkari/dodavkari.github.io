@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Naložím to a nedostanu pokutu? — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-20 flex-1 w-full">
+
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Naložím to a nedostanu pokutu?</h1>
+        <p id="bed-info" class="text-base text-zinc-300 mt-1"></p>
+      </div>
+      <div class="flex flex-wrap gap-2.5 self-start">
+        <button onclick="loadGroupageDemo()" class="text-sm font-semibold text-orange-300 bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 px-4 py-2 rounded-xl transition">
+          ⚡ Vzor: 3 dokládky po trase
+        </button>
+        <button onclick="clearBed()" class="text-sm text-zinc-300 hover:text-white bg-white/5 border border-white/10 px-4 py-2 rounded-xl transition">
+          Vyprázdnit korbu
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEVÝ PANEL: Přidání palet + Posuvníky váhy -->
+      <div class="lg:col-span-4 space-y-5">
+        <div class="trukon-card rounded-3xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold text-white">Přidat palety na korbu</span>
+            <div class="flex gap-1.5">
+              <button onclick="setPreset(120,80)" class="text-xs bg-[#141518] hover:bg-zinc-800 border border-white/15 rounded-lg px-2.5 py-1 text-zinc-200">EUR 120×80</button>
+              <button onclick="setPreset(120,100)" class="text-xs bg-[#141518] hover:bg-zinc-800 border border-white/15 rounded-lg px-2.5 py-1 text-zinc-200">120×100</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Počet ks</label>
+              <input type="number" id="p-qty" value="2" min="1" max="12" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-sm text-white font-bold">
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Délka (cm)</label>
+              <input type="number" id="p-len" value="120" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-sm text-white font-bold">
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Šířka (cm)</label>
+              <input type="number" id="p-wid" value="80" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-sm text-white font-bold">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Váha 1 ks (kg)</label>
+              <input type="number" id="p-kg" value="180" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-sm text-white font-bold">
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Pořadí vykládky</label>
+              <select id="p-stop" class="w-full bg-[#141518] border border-white/15 rounded-xl px-2.5 py-2 text-xs text-white">
+                <option value="1">1. vykládka (u dveří)</option>
+                <option value="2">2. vykládka (střed)</option>
+                <option value="3">3. vykládka (u kabiny)</option>
+              </select>
+            </div>
+          </div>
+
+          <button onclick="addPallet()" class="w-full trukon-btn text-sm py-3 rounded-xl transition">
+            + Naložit palety
+          </button>
+
+          <div class="pt-3 border-t border-white/10 space-y-1.5 text-sm">
+            <div class="flex justify-between">
+              <span class="text-zinc-400">Naloženo:</span>
+              <span id="sum-count" class="font-bold text-white">0 ks</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-zinc-400">Váha nákladu:</span>
+              <span id="sum-weight" class="font-bold text-emerald-400">0 / 910 kg</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 Posuvníky váhy -->
+        <div class="trukon-card-subtle rounded-3xl p-5 space-y-4">
+          <div class="text-sm font-bold text-white">⚖️ Simulátor policejní váhy</div>
+
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-300">Povolená váha v TP:</span>
+              <span id="lbl-gvw" class="font-bold text-white">3 500 kg</span>
+            </div>
+            <input type="range" id="rng-gvw" min="2490" max="3500" step="10" value="3500" oninput="onScaleSlider()"
+                   class="w-full accent-orange-500 cursor-pointer">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-zinc-300">Skutečná váha na váze:</span>
+              <span id="lbl-scale" class="font-bold text-orange-400">3 850 kg</span>
+            </div>
+            <input type="range" id="rng-scale" min="2200" max="4800" step="25" value="3850" oninput="onScaleSlider()"
+                   class="w-full accent-orange-500 cursor-pointer">
+          </div>
+        </div>
+      </div>
+
+      <!-- PRAVÝ PANEL: Korba + Pokuty -->
+      <div class="lg:col-span-8 space-y-5">
+
+        <div class="trukon-card rounded-3xl p-6">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3 text-xs">
+            <div class="flex items-center gap-3">
+              <span class="inline-flex items-center gap-1.5 text-zinc-300"><span class="w-3 h-3 rounded-sm bg-zinc-700 border border-zinc-400"></span> 3. u kabiny</span>
+              <span class="inline-flex items-center gap-1.5 text-orange-300"><span class="w-3 h-3 rounded-sm bg-orange-500/30 border border-orange-400"></span> 2. střed</span>
+              <span class="inline-flex items-center gap-1.5 text-emerald-300"><span class="w-3 h-3 rounded-sm bg-emerald-500/30 border border-emerald-400"></span> 1. u dveří</span>
+            </div>
+            <span class="text-zinc-400">Kliknutím na paletu ji otočíš o 90°</span>
+          </div>
+
+          <div class="overflow-x-auto py-3">
+            <div class="inline-flex items-center min-w-full justify-center px-2">
+              <div id="van-cab-visual" class="shrink-0 flex items-center"></div>
+              <div id="truck-bed" class="relative bg-[#111214] border-2 border-zinc-500 rounded-r-md shrink-0 shadow-inner transition-all"></div>
+              <div id="van-rear-visual" class="shrink-0 flex items-center"></div>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm">
+            <div class="flex items-center gap-4">
+              <span class="text-zinc-400">Zatížení náprav:</span>
+              <span id="axle-front" class="text-white font-semibold">Předek: 0 %</span>
+              <span id="axle-rear" class="text-white font-semibold">Zadek: 0 %</span>
+            </div>
+            <span id="fit-verdict" class="font-semibold text-emerald-400">✓ Všechny palety se vejdou</span>
+          </div>
+        </div>
+
+        <!-- Pokuty DE / AT -->
+        <div class="trukon-card rounded-3xl p-6 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="text-base font-bold text-white">Pokuty na váze (Německo &amp; Rakousko)</div>
+              <div id="out-scale-kg" class="text-sm text-zinc-300 mt-0.5">Celková váha: 3 250 / 3 500 kg</div>
+            </div>
+            <span id="out-pct" class="text-sm font-bold px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300">V normě (0 %)</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div class="bg-[#141518] border border-white/10 rounded-2xl p-4">
+              <div class="text-sm text-zinc-400">🇩🇪 Německo (BALM)</div>
+              <div id="out-de" class="text-xl font-bold text-white mt-1">0 €</div>
+              <div id="out-de-note" class="text-xs text-zinc-400 mt-0.5">Do 5 % v toleranci</div>
+            </div>
+            <div class="bg-[#141518] border border-white/10 rounded-2xl p-4">
+              <div class="text-sm text-zinc-400">🇦🇹 Rakousko</div>
+              <div id="out-at" class="text-xl font-bold text-white mt-1">0 €</div>
+              <div id="out-at-note" class="text-xs text-zinc-400 mt-0.5">V limitu</div>
+            </div>
+          </div>
+
+          <div id="out-ban" class="p-4 rounded-2xl bg-[#141518] border border-white/10 text-sm text-zinc-200"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    const SCALE = 1.15;
+    let pallets = [
+      { l: 120, w: 80, kg: 260, stop: 3 },
+      { l: 120, w: 80, kg: 220, stop: 2 },
+      { l: 120, w: 80, kg: 180, stop: 1 }
+    ];
+    let manualScaleKg = null;
+
+    function setPreset(l, w) {
+      document.getElementById("p-len").value = l;
+      document.getElementById("p-wid").value = w;
+    }
+
+    function loadGroupageDemo() {
+      manualScaleKg = null;
+      pallets = [
+        { l: 120, w: 80, kg: 175, stop: 3 },
+        { l: 120, w: 80, kg: 175, stop: 3 },
+        { l: 120, w: 80, kg: 125, stop: 2 },
+        { l: 120, w: 80, kg: 125, stop: 2 },
+        { l: 120, w: 80, kg: 125, stop: 2 },
+        { l: 120, w: 80, kg: 125, stop: 2 },
+        { l: 120, w: 80, kg: 135, stop: 1 },
+        { l: 120, w: 80, kg: 135, stop: 1 },
+        { l: 120, w: 80, kg: 130, stop: 1 }
+      ];
+      renderBed();
+    }
+
+    function addPallet() {
+      manualScaleKg = null;
+      const qty = Math.min(12, Math.max(1, Number(document.getElementById("p-qty").value) || 1));
+      const l = Number(document.getElementById("p-len").value) || 120;
+      const w = Number(document.getElementById("p-wid").value) || 80;
+      const kg = Number(document.getElementById("p-kg").value) || 200;
+      const stop = Number(document.getElementById("p-stop").value) || 1;
+      for (let i = 0; i < qty; i++) pallets.push({ l, w, kg, stop });
+      renderBed();
+    }
+
+    function clearBed() {
+      manualScaleKg = null;
+      pallets = [];
+      renderBed();
+    }
+
+    function rotatePallet(idx) {
+      const p = pallets[idx];
+      const tmp = p.l; p.l = p.w; p.w = tmp;
+      renderBed();
+    }
+
+    function removePallet(idx, e) {
+      e.stopPropagation();
+      manualScaleKg = null;
+      pallets.splice(idx, 1);
+      renderBed();
+    }
+
+    function onScaleSlider() {
+      const gvw = Number(document.getElementById("rng-gvw").value) || 3500;
+      const scaleKg = Number(document.getElementById("rng-scale").value) || 3500;
+      manualScaleKg = scaleKg;
+      updateFineFromTotal(gvw, scaleKg);
+    }
+
+    window.onVanChanged = () => {
+      const van = window.APP.getActiveVan();
+      document.getElementById("rng-gvw").value = van.id === "pod-25t" ? 2490 : 3500;
+      manualScaleKg = null;
+      renderBed();
+    };
+
+    function renderVehicleSilhouette(van, bedHeightPx) {
+      const cabEl = document.getElementById("van-cab-visual");
+      const rearEl = document.getElementById("van-rear-visual");
+      const hasBackSleeper = van.type === "plachta-backsleeper";
+      const isPlechovka = van.type === "plechovka";
+      const hasTailLift = van.type === "skrin-celo";
+      const cabHeight = isPlechovka ? bedHeightPx : Math.round(bedHeightPx * 0.86);
+
+      cabEl.innerHTML = `
+        <div class="relative flex items-center" style="height: ${cabHeight}px;">
+          <div class="h-full w-20 bg-zinc-900 border-2 border-r-0 border-zinc-500 rounded-l-[32px] flex items-center justify-end pr-2 relative overflow-hidden">
+            <div class="w-6 h-[74%] bg-zinc-800 border border-zinc-700 rounded-l-xl mr-1"></div>
+          </div>
+          ${hasBackSleeper ? `
+            <div class="h-full w-9 bg-zinc-900 border-y-2 border-l border-zinc-500 flex items-center justify-center">
+              <span class="text-[9px] text-orange-300 font-medium -rotate-90 whitespace-nowrap">SPANÍ</span>
+            </div>
+          ` : ``}
+        </div>
+      `;
+
+      rearEl.innerHTML = hasTailLift
+        ? `<div class="bg-zinc-900 border-2 border-l-0 border-zinc-500 rounded-r-md flex items-center justify-center" style="width: 30px; height: ${bedHeightPx - 8}px;"><span class="text-[9px] text-orange-300 font-medium -rotate-90 whitespace-nowrap">ČELO</span></div>`
+        : `<div class="w-2" style="height: ${bedHeightPx}px;"></div>`;
+    }
+
+    // Kontrola fyzické kolize: nedovolí položit paletu přes jinou paletu ani přes podběh
+    function isPositionBlocked(movingIdx, testX, testY, l, w, van, placedRects) {
+      if (testX < 0 || testY < 0 || testX + l > van.lengthCm || testY + w > van.widthCm) return true;
+
+      // Kolize s podběhy u plechovky
+      if (van.wheelArchCm) {
+        const archStart = van.lengthCm - 140;
+        const archEnd = archStart + 92;
+        const archDepth = (van.widthCm - van.wheelArchCm) / 2;
+        const overlapsX = (testX < archEnd) && ((testX + l) > archStart);
+        const overlapsY = (testY < archDepth) || ((testY + w) > (van.widthCm - archDepth));
+        if (overlapsX && overlapsY) return true;
+      }
+
+      // Kolize s ostatními paletami na podlaze
+      for (const r of placedRects) {
+        if (r.idx === movingIdx) continue;
+        const overlapX = (testX < r.x + r.l) && (testX + l > r.x);
+        const overlapY = (testY < r.y + r.w) && (testY + w > r.y);
+        if (overlapX && overlapY) return true;
+      }
+      return false;
+    }
+
+    function renderBed() {
+      const van = window.APP.getActiveVan();
+      const gvw = van.id === "pod-25t" ? 2490 : 3500;
+      document.getElementById("bed-info").textContent = `${van.name} • Ložná plocha ${van.lengthCm} × ${van.widthCm} cm • Nosnost ${van.payloadKg} kg`;
+
+      const bed = document.getElementById("truck-bed");
+      const bedW = Math.round(van.lengthCm * SCALE);
+      const bedH = Math.round(van.widthCm * SCALE);
+      bed.style.width = `${bedW}px`;
+      bed.style.height = `${bedH}px`;
+      bed.innerHTML = "";
+
+      renderVehicleSilhouette(van, bedH);
+
+      if (van.wheelArchCm) {
+        const archDepth = (van.widthCm - van.wheelArchCm) / 2;
+        const topArch = document.createElement("div");
+        topArch.className = "absolute bg-red-950/80 border border-red-700 text-[10px] text-red-200 flex items-center justify-center z-10";
+        topArch.style.left = `${(van.lengthCm - 140) * SCALE}px`;
+        topArch.style.top = "0px";
+        topArch.style.width = `${92 * SCALE}px`;
+        topArch.style.height = `${archDepth * SCALE}px`;
+        topArch.textContent = "Podběh";
+        const botArch = topArch.cloneNode(true);
+        botArch.style.top = "auto";
+        botArch.style.bottom = "0px";
+        bed.appendChild(topArch);
+        bed.appendChild(botArch);
+      }
+
+      const placedRects = [];
+      const sorted = pallets.map((p, i) => ({ ...p, origIdx: i })).sort((a, b) => b.stop - a.stop);
+      let curX = 0, curY = 0, rowMaxLen = 0, totalKg = 0, weightedMoment = 0, anyOverflow = false;
+
+      const stopColors = {
+        3: "bg-zinc-800 border-zinc-400 text-white",
+        2: "bg-orange-500/25 border-orange-400 text-orange-100",
+        1: "bg-emerald-500/25 border-emerald-400 text-emerald-100"
+      };
+
+      sorted.forEach(p => {
+        totalKg += p.kg;
+
+        // Automatické otočení palety podélně (šířka 80 cm), pokud v plechovce vjede mezi podběhy (142 cm)
+        if (van.wheelArchCm && p.customX === undefined) {
+          const archStart = van.lengthCm - 140;
+          if (curX + p.l > archStart && curY + p.w > van.wheelArchCm && p.l < p.w) {
+            const tmp = p.l; p.l = p.w; p.w = tmp;
+          }
+        }
+
+        if (p.customX === undefined) {
+          const maxRowW = (van.wheelArchCm && curX + p.l > van.lengthCm - 140) ? van.wheelArchCm : van.widthCm;
+          if (curY + p.w > maxRowW) {
+            curX += rowMaxLen;
+            curY = 0;
+            rowMaxLen = 0;
+          }
+        }
+
+        const posX = p.customX !== undefined ? p.customX : curX;
+        const posY = p.customY !== undefined ? p.customY : curY;
+        placedRects.push({ idx: p.origIdx, x: posX, y: posY, l: p.l, w: p.w });
+
+        let hitsArch = false;
+        if (van.wheelArchCm) {
+          const archStart = van.lengthCm - 140;
+          const archEnd = archStart + 92;
+          const archDepth = (van.widthCm - van.wheelArchCm) / 2;
+          const overlapsX = (posX < archEnd) && ((posX + p.l) > archStart);
+          const overlapsY = (posY < archDepth) || ((posY + p.w) > (van.widthCm - archDepth));
+          if (overlapsX && overlapsY) hitsArch = true;
+        }
+
+        const overflows = (posX + p.l > van.lengthCm) || (posY + p.w > van.widthCm) || hitsArch;
+        if (overflows) anyOverflow = true;
+        const centerCm = posX + (p.l / 2);
+        weightedMoment += p.kg * (centerCm / van.lengthCm);
+
+        const el = document.createElement("div");
+        el.className = `absolute border rounded-lg p-2 flex flex-col justify-between cursor-move select-none z-20 ${overflows ? 'bg-red-600/70 border-red-200 text-white' : stopColors[p.stop]}`;
+        el.style.left = `${posX * SCALE}px`;
+        el.style.top = `${posY * SCALE}px`;
+        el.style.width = `${p.l * SCALE - 3}px`;
+        el.style.height = `${p.w * SCALE - 3}px`;
+
+        el.innerHTML = `
+          <div class="flex items-center justify-between text-xs font-bold">
+            <span>#${p.stop} • ${p.kg}kg</span>
+            <div class="flex gap-1">
+              <button onclick="rotatePallet(${p.origIdx}); event.stopPropagation();" title="Otočit o 90°" class="hover:text-orange-300 px-1">↻</button>
+              <button onclick="removePallet(${p.origIdx}, event)" class="hover:text-red-300 px-1">✕</button>
+            </div>
+          </div>
+          <div class="text-[11px] opacity-85">${hitsArch ? '⚠️ Podběh!' : `${p.l}×${p.w}`}</div>
+        `;
+
+        // Plynulé posouvání palety myší po korbě (mění těžiště Předek/Zadek v reálném čase)
+        el.addEventListener("mousedown", (ev) => {
+          if (ev.target.tagName === "BUTTON") return;
+          const startX = ev.clientX, startY = ev.clientY;
+          const origX = posX, origY = posY;
+          let curValidX = origX, curValidY = origY;
+
+          const onMove = (me) => {
+            const targetX = Math.max(0, Math.min(van.lengthCm - p.l, Math.round(origX + (me.clientX - startX) / SCALE)));
+            const targetY = Math.max(0, Math.min(van.widthCm - p.w, Math.round(origY + (me.clientY - startY) / SCALE)));
+
+            // Zkusíme posun v obou osách; pokud narazí do jiné palety, klouže podél její hrany!
+            if (!isPositionBlocked(p.origIdx, targetX, targetY, p.l, p.w, van, placedRects)) {
+              curValidX = targetX; curValidY = targetY;
+            } else if (!isPositionBlocked(p.origIdx, targetX, curValidY, p.l, p.w, van, placedRects)) {
+              curValidX = targetX;
+            } else if (!isPositionBlocked(p.origIdx, curValidX, targetY, p.l, p.w, van, placedRects)) {
+              curValidY = targetY;
+            }
+            pallets[p.origIdx].customX = curValidX;
+            pallets[p.origIdx].customY = curValidY;
+            renderBed();
+          };
+          const onUp = () => {
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+          };
+          window.addEventListener("mousemove", onMove);
+          window.addEventListener("mouseup", onUp);
+        });
+
+        bed.appendChild(el);
+
+        if (p.customX === undefined) {
+          curY += p.w;
+          if (p.l > rowMaxLen) rowMaxLen = p.l;
+        }
+      });
+
+      const usedLenM = ((curX + rowMaxLen) / 100).toFixed(1);
+      document.getElementById("sum-count").textContent = `${pallets.length} ks (${usedLenM} m)`;
+      const wEl = document.getElementById("sum-weight");
+      wEl.textContent = `${totalKg} / ${van.payloadKg} kg`;
+      wEl.className = totalKg > van.payloadKg ? "font-bold text-red-400" : "font-bold text-emerald-400";
+
+      const fitEl = document.getElementById("fit-verdict");
+      if (anyOverflow) {
+        fitEl.textContent = "⚠️ Palety přesahují korbu nebo naráží do podběhu!";
+        fitEl.className = "font-bold text-red-400";
+      } else {
+        fitEl.textContent = "✓ Všechny palety se vejdou na podlahu";
+        fitEl.className = "font-semibold text-emerald-400";
+      }
+
+      const rearRatio = totalKg > 0 ? Math.min(95, Math.max(15, Math.round((weightedMoment / totalKg) * 100))) : 50;
+      document.getElementById("axle-front").textContent = `Předek: ${100 - rearRatio} %`;
+      document.getElementById("axle-rear").textContent = `Zadek: ${rearRatio} %`;
+
+      const emptyReady = gvw - van.payloadKg;
+      const calcScaleKg = manualScaleKg !== null ? manualScaleKg : (emptyReady + totalKg);
+      document.getElementById("rng-gvw").value = gvw;
+      document.getElementById("rng-scale").value = Math.min(4800, Math.max(2200, calcScaleKg));
+      updateFineFromTotal(gvw, calcScaleKg);
+    }
+
+    function updateFineFromTotal(gvw, totalKg) {
+      document.getElementById("lbl-gvw").textContent = `${gvw.toLocaleString("cs-CZ")} kg`;
+      document.getElementById("lbl-scale").textContent = `${totalKg.toLocaleString("cs-CZ")} kg`;
+
+      const overKg = Math.max(0, totalKg - gvw);
+      const overPct = (overKg / gvw) * 100;
+
+      document.getElementById("out-scale-kg").textContent = `Váha ukázala ${totalKg.toLocaleString("cs-CZ")} kg z povolených ${gvw.toLocaleString("cs-CZ")} kg`;
+
+      const pctEl = document.getElementById("out-pct");
+      if (overKg === 0) {
+        pctEl.textContent = "V normě (0 %)";
+        pctEl.className = "text-sm font-bold px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300";
+      } else {
+        pctEl.textContent = `Přetíženo o +${overPct.toFixed(1)} % (+${overKg} kg)`;
+        pctEl.className = overPct > 10
+          ? "text-sm font-bold px-3.5 py-1.5 rounded-full bg-red-500/25 text-red-200"
+          : "text-sm font-bold px-3.5 py-1.5 rounded-full bg-orange-500/25 text-orange-200";
+      }
+
+      let deDriver = 0, deCompany = 0, atFine = "0 €", banText = "✓ Váha je v pořádku.";
+
+      if (overPct > 2 && overPct <= 5) {
+        deDriver = 0; deCompany = 0; atFine = "35 – 70 €";
+        banText = "V Německu do 5 % v toleranci, v Rakousku už hrozí drobná pokuta.";
+      } else if (overPct > 5 && overPct <= 10) {
+        deDriver = 30; deCompany = 35; atFine = "80 – 210 €";
+        banText = "⚠️ V Německu pokuta bez bodů, v Rakousku může policie zakázat další jízdu do přeložení.";
+      } else if (overPct > 10 && overPct <= 15) {
+        deDriver = 95; deCompany = 140; atFine = "210 – 450 €";
+        banText = "🚨 Zákaz další jízdy! Musíš přeložit přebytečná kila na jinou dodávku.";
+      } else if (overPct > 15) {
+        deDriver = 235; deCompany = 425; atFine = "450 – 2 180 €";
+        banText = "🛑 Okamžité odstavení vozu, vysoká pokuta pro řidiče i firmu a 1 bod v Německu.";
+      }
+
+      document.getElementById("out-de").textContent = deDriver > 0 ? `Řidič ${deDriver} € + Firma ${deCompany} €` : `0 €`;
+      document.getElementById("out-de-note").textContent = deDriver > 0 ? `Celkem ${deDriver + deCompany} €` : `Do 5 % tolerance`;
+      document.getElementById("out-at").textContent = atFine;
+      document.getElementById("out-at-note").textContent = overPct > 2 ? `Bez tolerance + odstavení` : `V limitu`;
+      document.getElementById("out-ban").textContent = banText;
+    }
+
+    const passedCargoKg = Number(new URLSearchParams(location.search).get("cargoKg"));
+    if (passedCargoKg > 0) {
+      const van = window.APP.getActiveVan();
+      const gvw = van.id === "pod-25t" ? 2490 : 3500;
+      manualScaleKg = (gvw - van.payloadKg) + passedCargoKg;
+      pallets = [{ l: 120, w: 80, kg: passedCargoKg, stop: 1 }];
+    }
+
+    renderBed();
+  </script>
+</body>
+</html>

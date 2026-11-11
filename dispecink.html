@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dispečerská nástěnka — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .sortable-ghost {
+      background: rgba(255, 85, 38, 0.08) !important;
+      border: 1.5px dashed rgba(255, 85, 38, 0.5) !important;
+      border-radius: 16px !important;
+    }
+    .sortable-ghost * { visibility: hidden !important; }
+
+    /* Plynulé tažení přilepené k myši (transition: none zabraňuje zpožďování za kurzorem!) */
+    .sortable-drag {
+      opacity: 1 !important;
+      background: #1E1F24 !important;
+      border: 1px solid #FF5526 !important;
+      rotate: 2deg;
+      scale: 1.02;
+      transition: none !important;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.92) !important;
+      z-index: 9999 !important;
+      cursor: grabbing !important;
+    }
+    ::-webkit-scrollbar { height: 8px; width: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2A2B32; border-radius: 9999px; }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+  <!-- HORNÍ OVLÁDACÍ LIŠTA -->
+  <div class="bg-[#141518] border-b border-white/10 px-5 py-3 shrink-0">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <div class="flex items-center gap-3 flex-wrap">
+        <div id="board-tabs" class="inline-flex p-1 rounded-full bg-[#1C1D22] border border-white/10">
+          <button onclick="switchBoardType('transports')" id="btab-transports" class="px-4 py-1.5 rounded-full text-sm font-semibold trukon-pill-active transition">
+            Přepravy
+          </button>
+          <button onclick="switchBoardType('cars')" id="btab-cars" class="px-4 py-1.5 rounded-full text-sm font-medium text-zinc-400 hover:text-white transition">
+            Nástěnka aut
+          </button>
+          <button onclick="switchBoardType('drivers')" id="btab-drivers" class="px-4 py-1.5 rounded-full text-sm font-medium text-zinc-400 hover:text-white transition">
+            Nástěnka řidičů
+          </button>
+        </div>
+
+        <span id="total-board-sum" class="text-sm font-bold bg-orange-500/15 border border-orange-500/30 text-orange-300 px-3.5 py-1.5 rounded-full"></span>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <select id="filter-van" onchange="renderActiveWorkspace()" class="bg-[#1C1D22] hover:bg-zinc-800 text-zinc-100 text-sm font-medium rounded-full border border-white/10 px-4 py-2 focus:outline-none">
+          <option value="all">Všechna auta</option>
+        </select>
+
+        <button id="btn-raal-import" onclick="openRaalModal()" class="px-4 py-2 rounded-full text-sm font-semibold bg-white/5 hover:bg-white/10 text-orange-300 border border-orange-500/30 transition">
+          Vložit z Raalu / Timocomu
+        </button>
+
+        <button id="btn-edit-mode" onclick="toggleEditMode()" class="px-4 py-2 rounded-full text-sm font-medium bg-[#1C1D22] hover:bg-zinc-800 text-zinc-300 border border-white/10 transition">
+          Upravit sloupce
+        </button>
+
+        <button onclick="toggleThemeIcon()" id="btn-theme-icon" title="Přepnout světlý / tmavý vzhled"
+                class="w-9 h-9 rounded-full bg-[#1C1D22] hover:bg-zinc-800 text-zinc-200 border border-white/10 flex items-center justify-center transition">
+        </button>
+
+        <button id="btn-new-item" onclick="handleNewItemClick()" class="px-5 py-2 rounded-full text-sm font-semibold trukon-btn transition">
+          + Nová přeprava
+        </button>
+      </div>
+    </div>
+
+    <div id="edit-toolbar" class="hidden max-w-[1600px] mx-auto mt-3 pt-3 border-t border-white/10 items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-orange-300 font-semibold">Režim úprav sloupců:</span>
+        <button onclick="addNewColumn()" class="text-xs bg-white/10 hover:bg-white/15 text-white px-3.5 py-1.5 rounded-full">+ Přidat sloupec</button>
+      </div>
+      <button onclick="resetDefaultBoard()" class="text-xs text-zinc-400 hover:text-red-400">Obnovit výchozí data</button>
+    </div>
+  </div>
+
+  <!-- HLAVNÍ PLOCHA NÁSTĚNKY (Odlišené barevné tóny pro Přepravy, Auta a Řidiče) -->
+  <div id="board-bg-wrap" class="flex-1 flex flex-col min-h-0 w-full transition-colors duration-200 bg-[#111214]">
+    <div class="flex-1 flex flex-col min-h-0 max-w-[1600px] w-full mx-auto">
+      <div id="board-container" class="flex-1 flex gap-4 overflow-x-auto p-5 items-start select-none"></div>
+    </div>
+  </div>
+
+  <!-- MODÁL: RYCHLÝ IMPORT Z RAALU / TIMOCOMU -->
+  <div id="raal-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="trukon-card rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xl font-bold text-white">Vložit text z Raalu nebo e-mailu</h3>
+        <button onclick="closeRaalModal()" class="text-zinc-400 hover:text-white text-lg">✕</button>
+      </div>
+      <p class="text-sm text-zinc-300">
+        Zkopíruj text nabídky a vlož ho sem. Automaticky se vyplní města, palety, váha i cena.
+      </p>
+      <textarea id="raal-text" rows="4" class="w-full bg-[#141518] border border-white/15 rounded-2xl p-3.5 text-sm text-white"
+        placeholder="Např.: CZ 30100 Plzeň -> DE 68159 Mannheim, 8 EUR pal, 780 kg, cena 960 EUR"></textarea>
+      <div class="flex gap-2.5">
+        <button onclick="fillSampleRaal()" class="px-4 py-3 rounded-xl text-sm font-medium bg-white/5 text-zinc-200 hover:bg-white/10">
+          Ukázka
+        </button>
+        <button onclick="parseRaalAndCreateCard()" class="flex-1 trukon-btn text-sm py-3 rounded-xl transition">
+          Vytvořit kartu přepravy →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODÁL 1: KOMPLETNÍ DETAIL PŘEPRAVY (SMS Firma + SMS Řidič + Našeptávač firem [ENTER] + 2. vykládka + Překládka) -->
+  <!-- ========================================================================= -->
+  <div id="card-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="trukon-card rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl my-auto max-h-[92vh] overflow-y-auto space-y-4">
+      
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <input type="text" id="c-code" oninput="updateLiveSms()" class="bg-[#141518] border border-white/15 rounded-xl px-3.5 py-1.5 text-base font-bold text-white w-40">
+          <button type="button" id="btn-toggle-loaded" onclick="toggleModalLoaded()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition"></button>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="c-col" class="bg-[#141518] border border-white/15 rounded-xl px-3.5 py-1.5 text-xs text-zinc-200"></select>
+          <button onclick="closeCardModal()" class="text-zinc-400 hover:text-white text-lg px-2">✕</button>
+        </div>
+      </div>
+
+      <!-- ŽIVĚ GENEROVANÉ SMS PRO FIRMU (ZÁKAZNÍKA) I PRO ŘIDIČE -->
+      <div class="bg-[#141518] border border-white/10 rounded-2xl p-4 space-y-3 text-xs">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-0.5">
+            <span class="font-bold text-zinc-400">SMS Firma (Avizace zákazníkovi / spedici):</span>
+            <p id="sms-company-preview" class="text-zinc-100 leading-relaxed"></p>
+          </div>
+          <button type="button" onclick="copyText('sms-company-preview', this)" class="shrink-0 bg-white/10 hover:bg-white/15 text-white px-3 py-1.5 rounded-xl font-semibold">
+            Kopírovat
+          </button>
+        </div>
+
+        <div class="pt-2.5 border-t border-white/10 flex items-start justify-between gap-3">
+          <div class="space-y-0.5">
+            <span class="font-bold text-orange-300">SMS Řidič (Kompletní dispozice do kabiny):</span>
+            <p id="sms-driver-preview" class="text-zinc-100 leading-relaxed whitespace-pre-line"></p>
+          </div>
+          <button type="button" onclick="copyText('sms-driver-preview', this)" class="shrink-0 trukon-btn px-3 py-1.5 rounded-xl font-semibold">
+            Kopírovat SMS
+          </button>
+        </div>
+      </div>
+
+      <form onsubmit="saveCard(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="c-id">
+
+        <!-- Řádek 1: Termíny, Spedice, Cena -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-zinc-400 mb-1">Termín nakládky</label>
+            <input type="text" id="c-load-date" placeholder="24.03. - 08:00" oninput="updateLiveSms()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1">Termín vykládky</label>
+            <input type="text" id="c-unload-date" placeholder="25.03. - 12:00" oninput="updateLiveSms()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1">Zákazník - Spedice</label>
+            <input type="text" id="c-customer" placeholder="např. DHL / Schenker" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+          </div>
+          <div id="modal-price-wrap">
+            <label class="block text-orange-300 font-bold mb-1">Cena (EUR)</label>
+            <input type="number" id="c-eur" placeholder="1150" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-orange-300 font-bold">
+          </div>
+        </div>
+
+        <!-- Řádek 2: NAKLÁDKA -->
+        <div class="bg-[#141518]/90 border border-white/10 rounded-2xl p-3.5 relative">
+          <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <span class="font-bold text-zinc-200">▲ Nakládka <span class="font-normal text-zinc-400">— začni psát, stiskem Enter se doplní ostatní pole</span></span>
+            <div class="flex items-center gap-3">
+              <button type="button" onclick="showCompanySuggest('N', '', true)" class="text-orange-300 hover:underline font-semibold">
+                📋 Vybrat z 20 uložených firem ▾
+              </button>
+              <button type="button" onclick="saveCompanyToDb('N')" class="text-orange-300 hover:underline font-semibold">
+                + Uložit firmu
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div class="relative">
+              <label class="block text-[11px] text-zinc-400 mb-0.5">FIRMA N</label>
+              <input type="text" id="c-firm-n" autocomplete="off" placeholder="Název firmy..."
+                     onfocus="showCompanySuggest('N', this.value, true)"
+                     oninput="showCompanySuggest('N', this.value); updateLiveSms();"
+                     onkeydown="handleSuggestKey(event, 'N')"
+                     class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white focus:border-orange-500 focus:outline-none">
+              <div id="suggest-N" class="hidden absolute left-0 right-0 top-14 bg-[#1C1D22] border border-orange-500/50 rounded-xl shadow-2xl z-30 max-h-48 overflow-y-auto"></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-zinc-400 mb-0.5">ADRESA N (Ulice)</label>
+              <input type="text" id="c-addr-n" placeholder="Ulice a č.p." oninput="updateLiveSms()"
+                     class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-zinc-400 mb-0.5">MĚSTO A PSČ N *</label>
+              <input type="text" id="c-city-n" required placeholder="např. CZ 30100 Plzeň" oninput="updateLiveSms()"
+                     class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white font-semibold">
+            </div>
+          </div>
+        </div>
+
+        <!-- Řádek 3: VYKLÁDKA (S možností přidat 2., 3., 4. vykládku se všemi 3 poli!) -->
+        <div class="bg-[#141518]/90 border border-white/10 rounded-2xl p-3.5 relative space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="font-bold text-zinc-200">▼ Vykládka <span class="font-normal text-zinc-400">— začni psát, stiskem Enter se doplní ostatní pole</span></span>
+            <div class="flex items-center gap-3">
+              <button type="button" onclick="showCompanySuggest('V', '', true)" class="text-orange-300 hover:underline font-semibold">
+                📋 Vybrat z 20 uložených firem ▾
+              </button>
+              <button type="button" onclick="addExtraUnloadStop()" class="text-zinc-200 hover:text-white bg-white/10 px-2.5 py-1 rounded-lg font-semibold">
+                + Přidat další vykládku (2., 3., 4.)
+              </button>
+              <button type="button" onclick="saveCompanyToDb('V')" class="text-orange-300 hover:underline font-semibold">
+                + Uložit firmu
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div class="relative">
+              <label class="block text-[11px] text-zinc-400 mb-0.5">FIRMA V</label>
+              <input type="text" id="c-firm-v" autocomplete="off" placeholder="Název firmy..."
+                     onfocus="showCompanySuggest('V', this.value, true)"
+                     oninput="showCompanySuggest('V', this.value); updateLiveSms();"
+                     onkeydown="handleSuggestKey(event, 'V')"
+                     class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white focus:border-orange-500 focus:outline-none">
+              <div id="suggest-V" class="hidden absolute left-0 right-0 top-14 bg-[#1C1D22] border border-orange-500/50 rounded-xl shadow-2xl z-30 max-h-48 overflow-y-auto"></div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-zinc-400 mb-0.5">ADRESA V (Ulice)</label>
+              <input type="text" id="c-addr-v" placeholder="Ulice a č.p." oninput="updateLiveSms()"
+                     class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-zinc-400 mb-0.5">MĚSTO A PSČ V *</label>
+              <input type="text" id="c-city-v" required placeholder="např. DE 68159 Mannheim" oninput="updateLiveSms()"
+                     class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white font-semibold">
+            </div>
+          </div>
+
+          <!-- Kontejner pro 2., 3., 4. vykládku (každá má FIRMA, ADRESA i MĚSTO/PSČ!) -->
+          <div id="extra-unloads-container" class="space-y-2.5"></div>
+        </div>
+
+        <!-- Řádek 4: Palety, Hmotnost, Auto, Překládka, Paletové konto -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+          <div>
+            <label class="block text-zinc-400 mb-1">Palety</label>
+            <input type="text" id="c-pal" placeholder="10 pal." oninput="updateLiveSms()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1">Hmotnost</label>
+            <input type="text" id="c-kg" placeholder="750 kg" oninput="updateLiveSms()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-orange-300 font-bold mb-1">Přiřazené auto</label>
+            <select id="c-van" onchange="updateLiveSms()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white font-bold"></select>
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1">Překládka / Sklad</label>
+            <input type="text" id="c-transship" placeholder="např. V Plzni na #2" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-orange-300">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1">Paletové konto</label>
+            <input type="text" id="c-pallets-debt" placeholder="Výměna 10 EUR" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+          </div>
+        </div>
+
+        <!-- Řádek 5: Popis nakládky (Ref. kód), Popis vykládky (Kontakt), Tel. na zákazníka -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div>
+            <label class="block text-zinc-400 mb-1">Popis nakládky (Ref. kód)</label>
+            <input type="text" id="c-ref-n" placeholder="např. Kód 123" oninput="updateLiveSms()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1">Popis vykládky (Kontakt)</label>
+            <input type="text" id="c-ref-v" placeholder="např. pan Novotný, tel..." oninput="updateLiveSms()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1">Tel. na zákazníka</label>
+            <input type="text" id="c-cust-phone" placeholder="+420 ..." class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10 text-xs">
+          <span class="text-zinc-400">Otevřít tuto zakázku v nástroji:</span>
+          <button type="button" onclick="openCardInTool('rentgen')" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-200 font-semibold">
+            Vyplatí se to jet? →
+          </button>
+          <button type="button" onclick="openCardInTool('sledovani')" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-200 font-semibold">
+            Sledování a palety →
+          </button>
+          <button type="button" onclick="openCardInTool('upominky')" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-orange-300 font-semibold">
+            Upomínka +40 € →
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-white/10">
+          <button type="button" id="btn-delete-card" onclick="deleteCurrentCard()" class="text-sm text-red-400 hover:underline hidden">Smazat kartu</button>
+          <div class="flex gap-2.5 ml-auto">
+            <button type="button" id="btn-track-card" onclick="openTrackingForCurrentCard()" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium">📍 Sledování</button>
+            <button type="button" onclick="closeCardModal()" class="px-4 py-2.5 rounded-xl bg-white/5 text-zinc-300">Zavřít</button>
+            <button type="submit" class="px-6 py-2.5 rounded-xl trukon-btn">Uložit přepravu</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODÁL 2: KARTA VOZU (Se servisem, VIN, SPZ a seznamem přiřazených i odjetých přeprav) -->
+  <!-- ========================================================================= -->
+  <div id="van-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="trukon-card rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-auto">
+      <div class="flex items-start justify-between border-b border-white/10 pb-3">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h3 id="vm-code" class="text-2xl font-bold text-white">Master #1</h3>
+            <span id="vm-service-badge" class="px-3 py-1 rounded-full text-xs font-semibold"></span>
+          </div>
+          <p id="vm-model" class="text-sm text-zinc-400 mt-1"></p>
+        </div>
+        <button onclick="closeVanModal()" class="text-zinc-400 hover:text-white text-lg px-2">✕</button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+        <div>
+          <label class="block text-zinc-400 mb-1">Další servis / olej (při km)</label>
+          <input type="number" id="vm-service-km" onchange="saveVanModal()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white font-bold">
+        </div>
+        <div>
+          <label class="block text-zinc-400 mb-1">Aktuální tachometr (km)</label>
+          <input type="number" id="vm-km" onchange="saveVanModal()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white font-bold">
+        </div>
+        <div>
+          <label class="block text-orange-300 mb-1">Problémy / Závady</label>
+          <input type="text" id="vm-problems" onchange="saveVanModal()" placeholder="Bez závad" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-orange-300">
+        </div>
+        <div>
+          <label class="block text-zinc-400 mb-1">Řidič</label>
+          <input type="text" id="vm-driver" onchange="saveVanModal()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white font-semibold">
+        </div>
+        <div>
+          <label class="block text-zinc-400 mb-1">SPZ</label>
+          <input type="text" id="vm-spz" onchange="saveVanModal()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white font-bold">
+        </div>
+        <div>
+          <label class="block text-zinc-400 mb-1">Aktuální poloha (Město)</label>
+          <input type="text" id="vm-city" onchange="saveVanModal()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+        </div>
+      </div>
+
+      <div class="space-y-3 pt-2 border-t border-white/10 text-xs">
+        <div>
+          <div class="font-bold text-zinc-300 mb-1.5">Právě přiřazené přepravy:</div>
+          <div id="vm-active-list" class="space-y-1.5"></div>
+        </div>
+        <div>
+          <div class="font-bold text-zinc-400 mb-1.5">Odjeté přepravy (Hotovo):</div>
+          <div id="vm-done-list" class="space-y-1.5"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    const ROLE_CONFIG = {
+      dispecer: { label: "Pohled Dispečera", showBoardTabs: true, showPrices: true, showRaalImport: true, showDriverActions: false, showOwnerFinance: false },
+      ridic:    { label: "Pohled Řidiče (Moje jízdy & Navigace)", showBoardTabs: false, showPrices: false, showRaalImport: false, showDriverActions: true, showOwnerFinance: false },
+      majitel:  { label: "Pohled Majitele (Fakturace & Flotila)", showBoardTabs: true, showPrices: true, showRaalImport: false, showDriverActions: false, showOwnerFinance: true }
+    };
+
+    const BOARD_BG = {
+      transports: "bg-[#111214]",
+      cars:       "bg-[#0B1522]",
+      drivers:    "bg-[#0B1B15]"
+    };
+
+    const DEFAULT_STATE = {
+      companies: [
+        { name: "Continental Automotive s.r.o.", addr: "Průmyslová 12", city: "CZ 50601 Jičín" },
+        { name: "Continental Barum s.r.o.", addr: "Objízdná 1628", city: "CZ 76502 Otrokovice" },
+        { name: "ContiTech GmbH", addr: "Breslauer Str. 14", city: "DE 37154 Northeim" },
+        { name: "Miba Sinter Slovakia s.r.o.", addr: "Nábrežie Oravy 2222", city: "SK 02601 Dolný Kubín" },
+        { name: "Doosan Bobcat s.r.o.", addr: "Kodetky 1810", city: "CZ 26312 Dobříš" },
+        { name: "Škoda Auto a.s.", addr: "tř. Václava Klementa 869", city: "CZ 29301 Mladá Boleslav" }
+      ],
+      carColumns: [
+        { id: "cc-free", title: "Volné k nakládce" },
+        { id: "cc-road", title: "Na trase (Naloženo)" },
+        { id: "cc-warn", title: "Blíží se servis / Závada" }
+      ],
+      driverColumns: [
+        { id: "dc-drive", title: "V jízdě (Turnus)" },
+        { id: "dc-rest",  title: "Povinná pauza 9h / 45m" },
+        { id: "dc-home",  title: "Směr domů / Volno" }
+      ],
+      fleet: [
+        { code: "Master #1", carColId: "cc-warn", drvColId: "dc-drive", spz: "4P8 1920", model: "Renault Master III (2022) • 10pal Plachta", km: 243900, serviceKm: 245000, problems: "Výměna oleje za 1 100 km", driver: "Jan Novák", phone: "777 120 340", city: "Plzeň", zip: "CZ30", turnus: "Po – Pá" },
+        { code: "Master #2", carColId: "cc-road", drvColId: "dc-rest", spz: "5A2 3810", model: "Renault Master III (2023) • 10pal Plachta", km: 182100, serviceKm: 195000, problems: "", driver: "Petr Svoboda", phone: "608 441 920", city: "Vorchdorf (AT)", zip: "AT46", turnus: "Út – So" },
+        { code: "Ducato #3", carColId: "cc-free", drvColId: "dc-home", spz: "2B7 9044", model: "Fiat Ducato (2021) • L4H2 Plechovka", km: 310200, serviceKm: 320000, problems: "", driver: "Martin Dvořák", phone: "724 810 550", city: "Zvolen (SK)", zip: "SK96", turnus: "Po – Pá" },
+        { code: "Sprinter #4", carColId: "cc-road", drvColId: "dc-drive", spz: "8T4 1105", model: "Mercedes Sprinter (2024) • Skříň + čelo", km: 89000, serviceKm: 105000, problems: "", driver: "Tomáš Černý", phone: "602 990 115", city: "Norimberk (DE)", zip: "DE90", turnus: "Po – Pá" }
+      ],
+      columns: [
+        { id: "col-1", title: "1. Poptávky / K přiřazení" },
+        { id: "col-2", title: "2. Přiřazeno autu" },
+        { id: "col-3", title: "3. Naloženo na trase" },
+        { id: "col-4", title: "4. Vyloženo / K fakturaci" }
+      ],
+      cards: [
+        {
+          id: "c-101", colId: "col-1", code: "Zakázka #101", loaded: false,
+          loadDate: "24.03. - 08:00", unloadDate: "25.03. - 12:00", customer: "Schenker", eur: 980,
+          firmN: "Škoda Auto a.s.", addrN: "Průmyslová 358", cityN: "CZ 37001 České Budějovice",
+          firmV: "ContiTech GmbH", addrV: "Hafenstr. 12", cityV: "DE 68159 Mannheim", cityV2: "",
+          pal: "8 pal.", kg: "720 kg", van: "Master #1", transship: "", palletsDebt: "Výměna 8 EUR", refN: "Kód 441", refV: "pan Horvat", custPhone: "+420 777 111 222"
+        },
+        {
+          id: "c-102", colId: "col-2", code: "Zakázka #102", loaded: true,
+          loadDate: "24.03. - 07:30", unloadDate: "24.03. - 18:00", customer: "DHL Freight", eur: 1150,
+          firmN: "Miba Sinter Slovakia s.r.o.", addrN: "Nábrežie Oravy 2222", cityN: "SK 02601 Dolný Kubín",
+          firmV: "Doosan Bobcat s.r.o.", addrV: "Kodetky 1810", cityV: "CZ 26312 Dobříš", cityV2: "",
+          pal: "10 pal.", kg: "640 kg", van: "Ducato #3", transship: "V Ostravě přeloženo na Master #1", palletsDebt: "Bez výměny", refN: "Ref 9920", refV: "Sklad B2", custPhone: ""
+        },
+        {
+          id: "c-103", colId: "col-3", code: "Zakázka #103", loaded: true,
+          loadDate: "23.03. - 14:00", unloadDate: "24.03. - 12:00", customer: "DSV Road", eur: 1490,
+          firmN: "Continental Barum s.r.o.", addrN: "Objízdná 1628", cityN: "CZ 76502 Otrokovice",
+          firmV: "Logistik Italia S.r.l.", addrV: "Via Roma 395", cityV: "IT 20100 Milán", cityV2: "",
+          pal: "10 pal.", kg: "400 kg", van: "Master #2", transship: "", palletsDebt: "Dluží 4 EUR palety", refN: "Kód 123", refV: "pan Rossi", custPhone: ""
+        }
+      ]
+    };
+
+    let state = JSON.parse(localStorage.getItem("dodavkari_kanban_clean_v4")) || JSON.parse(JSON.stringify(DEFAULT_STATE));
+    if (!state.companies || state.companies.length < 10) {
+      state.companies = JSON.parse(JSON.stringify(window.APP.DEFAULT_COMPANIES));
+    }
+
+    function renderThemeIcon() {
+      const btn = document.getElementById("btn-theme-icon");
+      if (!btn) return;
+      const isLight = window.APP.getThemeMode() === "light";
+      btn.innerHTML = window.APP.svg(isLight ? "moon" : "sun", "w-4 h-4 text-orange-400");
+    }
+    function toggleThemeIcon() {
+      window.APP.toggleThemeMode();
+      renderThemeIcon();
+    }
+    renderThemeIcon();
+    let activeBoardType = "transports";
+    let isEditMode = false;
+    let modalLoadedState = false;
+    let activeVanCode = null;
+    let sortables = [];
+
+    function saveState() {
+      localStorage.setItem("dodavkari_kanban_clean_v4", JSON.stringify(state));
+    }
+
+    window.onRoleChanged = (newRole) => {
+      if (newRole === "ridic") activeBoardType = "transports";
+      renderActiveWorkspace();
+    };
+
+    function switchBoardType(type) {
+      activeBoardType = type;
+      ["transports", "cars", "drivers"].forEach(t => {
+        const btn = document.getElementById(`btab-${t}`);
+        btn.className = t === type
+          ? "px-4 py-1.5 rounded-full text-sm font-semibold trukon-pill-active transition"
+          : "px-4 py-1.5 rounded-full text-sm font-medium text-zinc-400 hover:text-white transition";
+      });
+      renderActiveWorkspace();
+    }
+
+    function renderActiveWorkspace() {
+      const role = window.APP.getRole();
+      const cfg = ROLE_CONFIG[role] || ROLE_CONFIG.dispecer;
+
+      document.getElementById("board-bg-wrap").className = `flex-1 flex flex-col min-h-0 w-full transition-colors duration-200 ${BOARD_BG[activeBoardType]}`;
+      const rmb = document.getElementById("role-mode-badge"); if (rmb) rmb.textContent = cfg.label;
+      document.getElementById("board-tabs").classList.toggle("hidden", !cfg.showBoardTabs);
+      document.getElementById("btn-raal-import").classList.toggle("hidden", !cfg.showRaalImport);
+      document.getElementById("total-board-sum").classList.toggle("hidden", !cfg.showPrices);
+      document.getElementById("modal-price-wrap").classList.toggle("hidden", !cfg.showPrices);
+
+      const newBtn = document.getElementById("btn-new-item");
+      newBtn.textContent = activeBoardType === "transports" ? "+ Nová přeprava" : "+ Přidat auto";
+      newBtn.classList.toggle("hidden", role === "ridic");
+
+      renderVanFilter();
+      sortables.forEach(s => s.destroy());
+      sortables = [];
+
+      if (activeBoardType === "transports") renderTransportsBoard(cfg);
+      else if (activeBoardType === "cars") renderCarsBoard();
+      else renderDriversBoard();
+    }
+
+    // 1. NÁSTĚNKA PŘEPRAV (Bez třídy 'transition' na kartě, aby plynule sledovala myš!)
+    function renderTransportsBoard(cfg) {
+      const filterVan = document.getElementById("filter-van").value;
+      const container = document.getElementById("board-container");
+
+      let totalEur = 0;
+      state.cards.forEach(c => totalEur += (Number(c.eur) || 0));
+      document.getElementById("total-board-sum").textContent = `Obrat: ${totalEur.toLocaleString("cs-CZ")} €`;
+
+      container.innerHTML = state.columns.map(col => {
+        const cards = state.cards.filter(c => c.colId === col.id && (filterVan === "all" || c.van === filterVan));
+
+        return `
+          <div class="w-[355px] shrink-0 trukon-card-subtle rounded-3xl p-4 flex flex-col max-h-full">
+            <div class="flex items-center justify-between px-1 pb-3">
+              ${isEditMode ? `
+                <input type="text" value="${col.title}" onchange="renameCol('${col.id}', this.value)" class="bg-[#141518] border border-white/20 rounded-lg px-2 py-1 text-xs font-bold text-white w-48">
+              ` : `
+                <span class="text-sm font-bold text-white">${col.title}</span>
+              `}
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/10 text-zinc-300">${cards.length}</span>
+            </div>
+
+            <div class="kanban-col space-y-3 overflow-y-auto flex-1 min-h-[120px]" data-col-id="${col.id}">
+              ${cards.map(c => `
+                <div onclick="openCardModal('${c.id}')" data-card-id="${c.id}"
+                     class="trukon-card rounded-2xl p-4 cursor-grab select-none space-y-2.5">
+                  
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-bold text-white">${c.code}</span>
+                      ${c.unloadDate ? `<span class="text-xs px-2 py-0.5 rounded-md bg-black/40 border border-white/10 text-zinc-200">${c.unloadDate}</span>` : ``}
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      ${cfg.showPrices && c.eur ? `<span class="text-xs font-bold text-orange-300">${c.eur} €</span>` : ``}
+                      <button onclick="quickToggleLoaded('${c.id}', event)"
+                              class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${c.loaded ? 'trukon-pill-active' : 'bg-white/10 text-zinc-300'}">
+                        ${c.loaded ? '✓ Naloženo' : 'Čeká'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="text-xs text-zinc-200 space-y-1">
+                    <div class="truncate">▲ <strong>${c.cityN}</strong> ${c.firmN ? `<span class="text-zinc-400">(${c.firmN})</span>` : ''}</div>
+                    <div class="truncate">▼ <strong>${c.cityV}</strong> ${c.cityV2 ? `<span class="text-orange-300 font-bold">+ 2. vykl.</span>` : ''}</div>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-2 border-t border-white/10 text-xs text-zinc-300">
+                    <button onclick="openVanModal('${c.van}', event)" class="font-semibold text-orange-300 hover:underline">
+                      ${c.van || "Nepřiřazeno"}
+                    </button>
+                    <span>${c.pal || ""} • ${c.kg || ""}</span>
+                  </div>
+
+                  ${cfg.showDriverActions ? `
+                    <div class="pt-2 border-t border-white/10 flex gap-2" onclick="event.stopPropagation()">
+                      <a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(c.cityN)}&destination=${encodeURIComponent(c.cityV)}"
+                         target="_blank" class="flex-1 bg-white/10 hover:bg-white/15 text-center py-2 rounded-xl text-xs font-semibold text-white">
+                        Navigovat trasu
+                      </a>
+                      <a href="skener.html" class="flex-1 trukon-btn text-center py-2 rounded-xl text-xs">
+                        Vyfotit CMR
+                      </a>
+                    </div>
+                  ` : ``}
+
+                  ${cfg.showOwnerFinance && (c.palletsDebt || c.transship) ? `
+                    <div class="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-orange-200">
+                      <span>${c.palletsDebt || ""}</span>
+                      <span>${c.transship || c.customer || ""}</span>
+                    </div>
+                  ` : ``}
+
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      initSortable(".kanban-col", (colId, itemId) => {
+        const card = state.cards.find(c => c.id === itemId);
+        if (card) card.colId = colId;
+      });
+    }
+
+    // 2. NÁSTĚNKA AUT
+    function renderCarsBoard() {
+      const container = document.getElementById("board-container");
+      container.innerHTML = state.carColumns.map(col => {
+        const vans = state.fleet.filter(v => (v.carColId || "cc-free") === col.id);
+        return `
+          <div class="w-[355px] shrink-0 bg-[#101E30] border border-sky-500/25 rounded-3xl p-4 flex flex-col max-h-full">
+            <div class="flex items-center justify-between px-1 pb-3">
+              <span class="text-sm font-bold text-white">${col.title}</span>
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/10 text-sky-200">${vans.length}</span>
+            </div>
+            <div class="kanban-col space-y-3 overflow-y-auto flex-1 min-h-[120px]" data-col-id="${col.id}">
+              ${vans.map(v => {
+                const kmLeft = v.serviceKm - v.km;
+                const warn = kmLeft <= 1500;
+                return `
+                  <div onclick="openVanModal('${v.code}')" data-card-id="${v.code}"
+                       class="trukon-card rounded-2xl p-4 cursor-grab select-none space-y-2.5">
+                    <div class="flex items-center justify-between">
+                      <span class="text-base font-bold text-white">${v.code} (${v.spz})</span>
+                      <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${warn ? 'bg-red-500/25 text-red-200' : 'bg-white/10 text-zinc-300'}">
+                        Servis za ${kmLeft.toLocaleString("cs-CZ")} km
+                      </span>
+                    </div>
+                    <div class="text-sm text-zinc-300">${v.model}</div>
+                    ${v.problems ? `<div class="text-xs text-orange-300 bg-orange-500/15 border border-orange-500/30 rounded-xl px-3 py-1.5">${v.problems}</div>` : ``}
+                    <div class="pt-2 border-t border-white/10 flex justify-between text-xs text-zinc-300">
+                      <span>Poloha: ${v.city}</span>
+                      <span>Řidič: ${v.driver}</span>
+                    </div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      initSortable(".kanban-col", (colId, vanCode) => {
+        const van = state.fleet.find(v => v.code === vanCode);
+        if (van) van.carColId = colId;
+      });
+    }
+
+    // 3. NÁSTĚNKA ŘIDIČŮ
+    function renderDriversBoard() {
+      const container = document.getElementById("board-container");
+      container.innerHTML = state.driverColumns.map(col => {
+        const drivers = state.fleet.filter(v => (v.drvColId || "dc-drive") === col.id);
+        return `
+          <div class="w-[355px] shrink-0 bg-[#0F241C] border border-emerald-500/25 rounded-3xl p-4 flex flex-col max-h-full">
+            <div class="flex items-center justify-between px-1 pb-3">
+              <span class="text-sm font-bold text-white">${col.title}</span>
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/10 text-emerald-200">${drivers.length}</span>
+            </div>
+            <div class="kanban-col space-y-3 overflow-y-auto flex-1 min-h-[120px]" data-col-id="${col.id}">
+              ${drivers.map(v => `
+                <div onclick="openVanModal('${v.code}')" data-card-id="${v.code}"
+                     class="trukon-card rounded-2xl p-4 cursor-grab select-none space-y-2.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-base font-bold text-white">${v.driver}</span>
+                    <span class="text-sm font-bold text-orange-300">${v.code}</span>
+                  </div>
+                  <div class="text-sm text-zinc-300">Turnus: <strong>${v.turnus || "Po – Pá"}</strong></div>
+                  <div class="pt-2 border-t border-white/10 flex justify-between text-xs text-zinc-300">
+                    <span>Tel: ${v.phone || "—"}</span>
+                    <span>Město: ${v.city}</span>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      initSortable(".kanban-col", (colId, vanCode) => {
+        const van = state.fleet.find(v => v.code === vanCode);
+        if (van) van.drvColId = colId;
+      });
+    }
+
+    function initSortable(selector, onMoveCallback) {
+      document.querySelectorAll(selector).forEach(colEl => {
+        const inst = new Sortable(colEl, {
+          group: "active-board",
+          animation: 180,
+          forceFallback: true,
+          fallbackOnBody: true,
+          fallbackTolerance: 3,
+          ghostClass: "sortable-ghost",
+          dragClass: "sortable-drag",
+          onEnd: (evt) => {
+            const targetColId = evt.to.getAttribute("data-col-id");
+            const itemId = evt.item.getAttribute("data-card-id");
+            onMoveCallback(targetColId, itemId);
+            saveState();
+            renderActiveWorkspace();
+          }
+        });
+        sortables.push(inst);
+      });
+    }
+
+    let extraUnloads = []; // Pole objektů: [{ firm: "", addr: "", city: "" }, ...]
+
+    function renderExtraUnloads() {
+      const wrap = document.getElementById("extra-unloads-container");
+      if (!wrap) return;
+      wrap.innerHTML = extraUnloads.map((st, i) => `
+        <div class="pt-2.5 border-t border-white/10 relative">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-bold text-orange-300">${i + 2}. VYKLÁDKA</span>
+            <button type="button" onclick="removeExtraUnload(${i})" class="text-xs text-zinc-400 hover:text-red-400">✕ Odebrat</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div class="relative">
+              <input type="text" placeholder="Firma ${i + 2}. vykládky..." value="${st.firm || ''}" autocomplete="off"
+                     onfocus="showExtraSuggest(${i}, this.value, true)"
+                     oninput="extraUnloads[${i}].firm=this.value; showExtraSuggest(${i}, this.value); updateLiveSms();"
+                     onkeydown="handleExtraSuggestKey(event, ${i})"
+                     class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white focus:border-orange-500 focus:outline-none">
+              <div id="suggest-extra-${i}" class="hidden absolute left-0 right-0 top-11 bg-[#1C1D22] border border-orange-500/50 rounded-xl shadow-2xl z-30 max-h-44 overflow-y-auto"></div>
+            </div>
+            <input type="text" id="extra-addr-${i}" placeholder="Adresa (Ulice)" value="${st.addr || ''}"
+                   oninput="extraUnloads[${i}].addr=this.value; updateLiveSms();"
+                   class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white">
+            <input type="text" id="extra-city-${i}" placeholder="Město a PSČ *" value="${st.city || ''}"
+                   oninput="extraUnloads[${i}].city=this.value; updateLiveSms();"
+                   class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white font-semibold">
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function showExtraSuggest(stopIdx, query, forceAll = false) {
+      const box = document.getElementById(`suggest-extra-${stopIdx}`);
+      if (!box) return;
+      const q = (query || "").trim().toLowerCase();
+      if (!forceAll && q.length < 1) { box.classList.add("hidden"); return; }
+
+      const list = state.companies || window.APP.DEFAULT_COMPANIES || [];
+      const matches = list.filter(c => !q || c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q)).slice(0, 8);
+      if (!matches.length) { box.classList.add("hidden"); return; }
+
+      box.innerHTML = matches.map((m, i) => `
+        <div onclick="applyExtraCompany(${stopIdx}, ${list.indexOf(m)})"
+             class="px-3.5 py-2 text-xs hover:bg-white/10 cursor-pointer flex items-center justify-between border-b border-white/10 last:border-0">
+          <strong class="text-orange-300">${m.name}</strong>
+          <span class="text-zinc-200 font-semibold ml-2">${m.city} ${i === 0 ? '[ENTER]' : ''}</span>
+        </div>
+      `).join("");
+      box.classList.remove("hidden");
+    }
+
+    function handleExtraSuggestKey(e, stopIdx) {
+      if (e.key === "Enter") {
+        const box = document.getElementById(`suggest-extra-${stopIdx}`);
+        if (box && !box.classList.contains("hidden")) {
+          e.preventDefault();
+          const q = e.target.value.trim().toLowerCase();
+          const list = state.companies || window.APP.DEFAULT_COMPANIES || [];
+          const foundIdx = list.findIndex(c => c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q));
+          if (foundIdx > -1) applyExtraCompany(stopIdx, foundIdx);
+        }
+      }
+    }
+
+    function applyExtraCompany(stopIdx, compIdx) {
+      const list = state.companies || window.APP.DEFAULT_COMPANIES || [];
+      const comp = list[compIdx];
+      if (!comp) return;
+      extraUnloads[stopIdx] = { firm: comp.name, addr: comp.addr, city: comp.city };
+      renderExtraUnloads();
+      updateLiveSms();
+    }
+
+    function addExtraUnloadStop() {
+      if (extraUnloads.length >= 4) return;
+      extraUnloads.push({ firm: "", addr: "", city: "" });
+      renderExtraUnloads();
+    }
+
+    function removeExtraUnload(idx) {
+      extraUnloads.splice(idx, 1);
+      renderExtraUnloads();
+      updateLiveSms();
+    }
+
+    function openCardInTool(target) {
+      const eur = Number(document.getElementById("c-eur").value) || 1000;
+      const kg = parseInt(document.getElementById("c-kg").value, 10) || 800;
+      const cityN = document.getElementById("c-city-n").value || "Nakládka";
+      const cityV = document.getElementById("c-city-v").value || "Vykládka";
+      const cust = document.getElementById("c-customer").value || "Spedice";
+
+      if (target === "rentgen") location.href = `rentgen.html?eur=${eur}&kg=${kg}`;
+      if (target === "sledovani") location.href = `sledovani.html?view=customer&route=${encodeURIComponent(cityN + " ➔ " + cityV)}`;
+      if (target === "upominky") location.href = `upominky.html?deb=${encodeURIComponent(cust)}&amt=${eur}`;
+    }
+
+    function openTrackingForCurrentCard() {
+      const cityN = document.getElementById("c-city-n").value.trim();
+      const cityV = document.getElementById("c-city-v").value.trim();
+      const route = `${cityN} ➔ ${cityV}`;
+      window.open(`sledovani.html?route=${encodeURIComponent(route)}`, "_blank");
+    }
+
+    // Upravený našeptávač firem: při kliknutí do pole nebo na "Uložené firmy" hned ukáže databázi firem!
+    function showCompanySuggest(type, query, forceShowAll = false) {
+      const box = document.getElementById(`suggest-${type}`);
+      const q = (query || "").trim().toLowerCase();
+      if (!forceShowAll && q.length < 1) { box.classList.add("hidden"); return; }
+
+      const matches = (state.companies || []).filter(c =>
+        !q || c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q)
+      ).slice(0, 8);
+
+      if (!matches.length) { box.classList.add("hidden"); return; }
+      box.innerHTML = matches.map((m, i) => `
+        <div onclick="applyCompany('${type}', ${state.companies.indexOf(m)})"
+             class="px-3.5 py-2 text-xs hover:bg-white/10 cursor-pointer flex items-center justify-between border-b border-white/10 last:border-0">
+          <div>
+            <strong class="text-orange-300">${m.name}</strong>
+            <span class="text-zinc-400 ml-1.5">${m.addr}</span>
+          </div>
+          <span class="text-zinc-200 font-semibold ml-2">${m.city} ${i === 0 ? '[ENTER]' : ''}</span>
+        </div>
+      `).join("");
+      box.classList.remove("hidden");
+    }
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#c-firm-n") && !e.target.closest("#suggest-N") && !e.target.closest("button")) {
+        document.getElementById("suggest-N")?.classList.add("hidden");
+      }
+      if (!e.target.closest("#c-firm-v") && !e.target.closest("#suggest-V") && !e.target.closest("button")) {
+        document.getElementById("suggest-V")?.classList.add("hidden");
+      }
+      for (let i = 0; i < 4; i++) {
+        if (!e.target.closest(`#suggest-extra-${i}`) && !e.target.closest(`[onfocus*="showExtraSuggest(${i}"]`)) {
+          document.getElementById(`suggest-extra-${i}`)?.classList.add("hidden");
+        }
+      }
+    });
+
+    function handleSuggestKey(e, type) {
+      if (e.key === "Enter") {
+        const box = document.getElementById(`suggest-${type}`);
+        if (!box.classList.contains("hidden")) {
+          e.preventDefault();
+          const q = e.target.value.trim().toLowerCase();
+          const idx = (state.companies || []).findIndex(c =>
+            c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q)
+          );
+          if (idx > -1) applyCompany(type, idx);
+        }
+      }
+    }
+
+    function applyCompany(type, idx) {
+      const comp = state.companies[idx];
+      if (!comp) return;
+      const s = type.toLowerCase();
+      document.getElementById(`c-firm-${s}`).value = comp.name;
+      document.getElementById(`c-addr-${s}`).value = comp.addr;
+      document.getElementById(`c-city-${s}`).value = comp.city;
+      document.getElementById(`suggest-${type}`).classList.add("hidden");
+      updateLiveSms();
+    }
+
+    function saveCompanyToDb(type) {
+      const s = type.toLowerCase();
+      const name = document.getElementById(`c-firm-${s}`).value.trim();
+      const addr = document.getElementById(`c-addr-${s}`).value.trim();
+      const city = document.getElementById(`c-city-${s}`).value.trim();
+      if (!name || !city) { alert("Vyplň název firmy a město/PSČ."); return; }
+      if (!state.companies) state.companies = [];
+      state.companies.push({ name, addr, city });
+      saveState();
+      alert(`Firma „${name}“ (${city}) byla uložena do databáze pro automatické doplňování.`);
+    }
+
+    // ŽIVÉ GENEROVÁNÍ SMS PRO FIRMU I ŘIDIČE
+    function updateLiveSms() {
+      const code = document.getElementById("c-code").value || "Zakázka";
+      const firmN = document.getElementById("c-firm-n").value;
+      const addrN = document.getElementById("c-addr-n").value;
+      const cityN = document.getElementById("c-city-n").value || "—";
+      const firmV = document.getElementById("c-firm-v").value;
+      const addrV = document.getElementById("c-addr-v").value;
+      const cityV = document.getElementById("c-city-v").value || "—";
+      const pal = document.getElementById("c-pal").value || "— pal.";
+      const kg = document.getElementById("c-kg").value || "— kg";
+      const refN = document.getElementById("c-ref-n").value;
+      const refV = document.getElementById("c-ref-v").value;
+
+      const extraStopsText = extraUnloads.map((st, i) => `${i + 2}. vykládka: ${st.firm ? st.firm + ', ' : ''}${st.addr ? st.addr + ', ' : ''}${st.city}`).filter(Boolean).join("\n");
+      const lastCity = (extraUnloads.length && extraUnloads[extraUnloads.length - 1].city) ? extraUnloads[extraUnloads.length - 1].city : cityV;
+
+      document.getElementById("sms-company-preview").textContent =
+        `Dobrý den, přeprava ${cityN} – ${lastCity} bylo naloženo ${pal}, ${kg}. S pozdravem`;
+
+      document.getElementById("sms-driver-preview").textContent =
+        `Nakládka (${code}): ${firmN ? firmN + ', ' : ''}${addrN ? addrN + ', ' : ''}${cityN}.\n` +
+        `Náklad: ${pal}, ${kg}${refN ? ', ' + refN : ''}${refV ? ', Kontakt: ' + refV : ''}.\n` +
+        `1. Vykládka: ${firmV ? firmV + ', ' : ''}${addrV ? addrV + ', ' : ''}${cityV}.\n` +
+        (extraStopsText ? `${extraStopsText}\n` : '') +
+        `Nechte potvrdit CMR, DL a datum vykládky.`;
+    }
+
+    function toggleSecondUnload() {
+      document.getElementById("second-unload-box").classList.toggle("hidden");
+    }
+
+    function copyText(id, btn) {
+      navigator.clipboard.writeText(document.getElementById(id).textContent);
+      const old = btn.textContent;
+      btn.textContent = "✓ Zkopírováno";
+      setTimeout(() => btn.textContent = old, 2000);
+    }
+
+    function openRaalModal() { document.getElementById("raal-modal").classList.remove("hidden"); document.getElementById("raal-modal").classList.add("flex"); }
+    function closeRaalModal() { document.getElementById("raal-modal").classList.add("hidden"); document.getElementById("raal-modal").classList.remove("flex"); }
+    function fillSampleRaal() { document.getElementById("raal-text").value = "CZ 30100 Plzeň -> DE 68159 Mannheim, 8 EUR pal, 780 kg, cena 960 EUR"; }
+
+    function parseRaalAndCreateCard() {
+      const raw = document.getElementById("raal-text").value.trim();
+      if (!raw) return;
+      const eurMatch = raw.match(/(\d{3,4})\s*(?:EUR|€)/i);
+      const palMatch = raw.match(/(\d{1,2})\s*(?:EUR\s*)?pal/i);
+      const kgMatch = raw.match(/(\d{2,4})\s*kg/i);
+      const parts = raw.split(/->|—|-|do/i);
+
+      const newCard = {
+        id: "c-" + Date.now(),
+        colId: state.columns[0].id,
+        code: `Zakázka #${101 + state.cards.length}`,
+        loaded: false,
+        loadDate: "Dnes 08:00", unloadDate: "Zítra 12:00", customer: "Raal / Timocom",
+        eur: eurMatch ? Number(eurMatch[1]) : 950,
+        firmN: "", addrN: "", cityN: (parts[0] || "CZ Nakládka").trim().slice(0, 32),
+        firmV: "", addrV: "", cityV: (parts[1] || "DE Vykládka").split(",")[0].trim().slice(0, 32), cityV2: "",
+        pal: palMatch ? `${palMatch[1]} pal.` : "8 pal.",
+        kg: kgMatch ? `${kgMatch[1]} kg` : "800 kg",
+        van: state.fleet[0]?.code || "Master #1",
+        transship: "", palletsDebt: "Výměna EUR", refN: "", refV: "", custPhone: ""
+      };
+      state.cards.unshift(newCard);
+      saveState(); closeRaalModal(); switchBoardType("transports"); openCardModal(newCard.id);
+    }
+
+    function renderVanFilter() {
+      const sel = document.getElementById("filter-van");
+      const val = sel.value || "all";
+      sel.innerHTML = `<option value="all">Všechna auta (${state.fleet.length})</option>` +
+        state.fleet.map(v => `<option value="${v.code}" ${v.code === val ? 'selected' : ''}>${v.code} (${v.driver})</option>`).join("");
+    }
+
+    function quickToggleLoaded(cardId, e) {
+      e.stopPropagation();
+      const c = state.cards.find(x => x.id === cardId);
+      if (c) { c.loaded = !c.loaded; saveState(); renderActiveWorkspace(); }
+    }
+
+    function handleNewItemClick() {
+      if (activeBoardType === "transports") openCardModal(null);
+      else {
+        const code = prompt("Označení auta (např. Master #5):", `Dodávka #${state.fleet.length + 1}`);
+        if (!code) return;
+        const driver = prompt("Jméno řidiče:", "Jan Novák") || "Jan Novák";
+        state.fleet.push({
+          code: code.trim(), carColId: "cc-free", drvColId: "dc-drive",
+          spz: "1AB 2345", model: "Renault Master • 10pal Plachta",
+          km: 110000, serviceKm: 125000, problems: "", driver, phone: "777 111 222",
+          city: "Praha", zip: "CZ10", turnus: "Po – Pá"
+        });
+        saveState(); renderActiveWorkspace();
+      }
+    }
+
+    function openCardModal(cardId) {
+      const vanSel = document.getElementById("c-van");
+      const colSel = document.getElementById("c-col");
+      vanSel.innerHTML = state.fleet.map(v => `<option value="${v.code}">${v.code} (${v.driver})</option>`).join("");
+      colSel.innerHTML = state.columns.map(c => `<option value="${c.id}">${c.title}</option>`).join("");
+
+      if (cardId) {
+        const c = state.cards.find(x => x.id === cardId);
+        if (!c) return;
+        document.getElementById("c-id").value = c.id;
+        document.getElementById("c-code").value = c.code;
+        modalLoadedState = !!c.loaded;
+        document.getElementById("c-load-date").value = c.loadDate || "";
+        document.getElementById("c-unload-date").value = c.unloadDate || "";
+        document.getElementById("c-customer").value = c.customer || "";
+        document.getElementById("c-eur").value = c.eur || "";
+        document.getElementById("c-firm-n").value = c.firmN || "";
+        document.getElementById("c-addr-n").value = c.addrN || "";
+        document.getElementById("c-city-n").value = c.cityN || "";
+        document.getElementById("c-firm-v").value = c.firmV || "";
+        document.getElementById("c-addr-v").value = c.addrV || "";
+        document.getElementById("c-city-v").value = c.cityV || "";
+        extraUnloads = Array.isArray(c?.extraUnloads) ? JSON.parse(JSON.stringify(c.extraUnloads)) : [];
+        renderExtraUnloads();
+        document.getElementById("c-pal").value = c.pal || "";
+        document.getElementById("c-kg").value = c.kg || "";
+        vanSel.value = c.van || "";
+        document.getElementById("c-transship").value = c.transship || "";
+        document.getElementById("c-pallets-debt").value = c.palletsDebt || "";
+        document.getElementById("c-ref-n").value = c.refN || "";
+        document.getElementById("c-ref-v").value = c.refV || "";
+        document.getElementById("c-cust-phone").value = c.custPhone || "";
+        colSel.value = c.colId;
+        document.getElementById("btn-delete-card").classList.remove("hidden");
+      } else {
+        document.getElementById("c-id").value = "";
+        document.getElementById("c-code").value = `Zakázka #${101 + state.cards.length}`;
+        modalLoadedState = false;
+        ["c-load-date","c-unload-date","c-customer","c-eur","c-firm-n","c-addr-n","c-city-n","c-firm-v","c-addr-v","c-city-v","c-transship","c-ref-n","c-ref-v","c-cust-phone"].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = "";
+        });
+        extraUnloads = [];
+        renderExtraUnloads();
+        document.getElementById("c-pal").value = "10 pal.";
+        document.getElementById("c-kg").value = "800 kg";
+        document.getElementById("c-pallets-debt").value = "Výměna EUR";
+        document.getElementById("btn-delete-card").classList.add("hidden");
+      }
+      renderModalLoadedBtn();
+      updateLiveSms();
+      document.getElementById("card-modal").classList.remove("hidden");
+      document.getElementById("card-modal").classList.add("flex");
+    }
+
+    function renderModalLoadedBtn() {
+      const btn = document.getElementById("btn-toggle-loaded");
+      btn.className = modalLoadedState ? "px-3.5 py-1.5 rounded-xl text-xs font-bold trukon-pill-active" : "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white/10 text-zinc-300";
+      btn.textContent = modalLoadedState ? "✓ Naloženo" : "Označit jako Naloženo";
+    }
+    function toggleModalLoaded() { modalLoadedState = !modalLoadedState; renderModalLoadedBtn(); }
+    function closeCardModal() { document.getElementById("card-modal").classList.add("hidden"); document.getElementById("card-modal").classList.remove("flex"); }
+
+    function saveCard(e) {
+      e.preventDefault();
+      const id = document.getElementById("c-id").value;
+      const obj = {
+        id: id || "c-" + Date.now(),
+        colId: document.getElementById("c-col").value,
+        code: document.getElementById("c-code").value.trim(),
+        loaded: modalLoadedState,
+        loadDate: document.getElementById("c-load-date").value.trim(),
+        unloadDate: document.getElementById("c-unload-date").value.trim(),
+        customer: document.getElementById("c-customer").value.trim(),
+        eur: Number(document.getElementById("c-eur").value) || 0,
+        firmN: document.getElementById("c-firm-n").value.trim(),
+        addrN: document.getElementById("c-addr-n").value.trim(),
+        cityN: document.getElementById("c-city-n").value.trim(),
+        firmV: document.getElementById("c-firm-v").value.trim(),
+        addrV: document.getElementById("c-addr-v").value.trim(),
+        cityV: document.getElementById("c-city-v").value.trim(),
+        cityV2: extraUnloads.map(u => u.city).filter(Boolean).join(" -> "),
+        extraUnloads: JSON.parse(JSON.stringify(extraUnloads)),
+        pal: document.getElementById("c-pal").value.trim(),
+        kg: document.getElementById("c-kg").value.trim(),
+        van: document.getElementById("c-van").value,
+        transship: document.getElementById("c-transship").value.trim(),
+        palletsDebt: document.getElementById("c-pallets-debt").value.trim(),
+        refN: document.getElementById("c-ref-n").value.trim(),
+        refV: document.getElementById("c-ref-v").value.trim(),
+        custPhone: document.getElementById("c-cust-phone").value.trim()
+      };
+      if (id) {
+        const idx = state.cards.findIndex(x => x.id === id);
+        if (idx > -1) state.cards[idx] = obj;
+      } else state.cards.push(obj);
+      saveState(); closeCardModal(); renderActiveWorkspace();
+    }
+
+    function deleteCurrentCard() {
+      const id = document.getElementById("c-id").value;
+      state.cards = state.cards.filter(x => x.id !== id);
+      saveState(); closeCardModal(); renderActiveWorkspace();
+    }
+
+    function openVanModal(vanCode, e = null) {
+      if (e) e.stopPropagation();
+      const v = state.fleet.find(x => x.code === vanCode);
+      if (!v) return;
+      activeVanCode = vanCode;
+      document.getElementById("vm-code").textContent = v.code;
+      document.getElementById("vm-model").textContent = v.model;
+      document.getElementById("vm-service-km").value = v.serviceKm;
+      document.getElementById("vm-km").value = v.km;
+      document.getElementById("vm-problems").value = v.problems || "";
+      document.getElementById("vm-driver").value = v.driver || "";
+      document.getElementById("vm-spz").value = v.spz || "";
+      document.getElementById("vm-city").value = v.city || "";
+
+      const left = v.serviceKm - v.km;
+      const badge = document.getElementById("vm-service-badge");
+      badge.className = left <= 1500 ? "px-3 py-1 rounded-full text-xs font-semibold bg-red-500/25 text-red-200" : "px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-zinc-300";
+      badge.textContent = `Servis za ${left.toLocaleString("cs-CZ")} km`;
+
+      const lastColId = state.columns[state.columns.length - 1]?.id;
+      const activeCards = state.cards.filter(c => c.van === vanCode && c.colId !== lastColId);
+      const doneCards = state.cards.filter(c => c.van === vanCode && c.colId === lastColId);
+
+      const renderList = (arr) => arr.length === 0
+        ? `<div class="text-zinc-500 italic">Žádné záznamy</div>`
+        : arr.map(c => `
+          <div onclick="closeVanModal(); openCardModal('${c.id}');" class="flex justify-between bg-[#141518] hover:bg-zinc-800 border border-white/10 rounded-xl px-3.5 py-2 cursor-pointer">
+            <span><strong class="text-white underline">${c.code}</strong> • ${c.cityN} → ${c.cityV}</span>
+            <span class="text-zinc-400">${c.unloadDate || ""}</span>
+          </div>
+        `).join("");
+
+      document.getElementById("vm-active-list").innerHTML = renderList(activeCards);
+      document.getElementById("vm-done-list").innerHTML = renderList(doneCards);
+
+      document.getElementById("van-modal").classList.remove("hidden");
+      document.getElementById("van-modal").classList.add("flex");
+    }
+
+    function saveVanModal() {
+      const v = state.fleet.find(x => x.code === activeVanCode);
+      if (!v) return;
+      v.serviceKm = Number(document.getElementById("vm-service-km").value) || 0;
+      v.km = Number(document.getElementById("vm-km").value) || 0;
+      v.problems = document.getElementById("vm-problems").value.trim();
+      v.driver = document.getElementById("vm-driver").value.trim();
+      v.spz = document.getElementById("vm-spz").value.trim();
+      v.city = document.getElementById("vm-city").value.trim();
+      saveState(); openVanModal(activeVanCode); renderActiveWorkspace();
+    }
+    function closeVanModal() { document.getElementById("van-modal").classList.add("hidden"); document.getElementById("van-modal").classList.remove("flex"); }
+
+    function toggleEditMode() {
+      isEditMode = !isEditMode;
+      document.getElementById("edit-toolbar").classList.toggle("hidden", !isEditMode);
+      document.getElementById("edit-toolbar").classList.toggle("flex", isEditMode);
+      renderActiveWorkspace();
+    }
+    function addNewColumn() {
+      const t = prompt("Název nového sloupce:");
+      if (!t) return;
+      const targetArr = activeBoardType === "transports" ? state.columns : (activeBoardType === "cars" ? state.carColumns : state.driverColumns);
+      targetArr.push({ id: "col-" + Date.now(), title: t.trim() });
+      saveState(); renderActiveWorkspace();
+    }
+    function renameCol(id, val) {
+      const c = state.columns.find(x => x.id === id);
+      if (c && val.trim()) { c.title = val.trim(); saveState(); }
+    }
+    function resetDefaultBoard() {
+      if (!confirm("Obnovit výchozí ukázková data?")) return;
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      saveState(); renderActiveWorkspace();
+    }
+
+    renderActiveWorkspace();
+  </script>
+</body>
+</html>

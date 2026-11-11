@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-24 flex-1 w-full space-y-10">
+
+    <!-- 1. HORNÍ PANEL: VÝBĚR KDO JSI + RYCHLÁ PROVĚRKA SPEDICE -->
+    <section class="trukon-card rounded-3xl p-6 sm:p-9">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        
+        <div class="lg:col-span-7 space-y-5">
+          <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+            Nástroje pro dodávkáře do 3,5t
+          </h1>
+          <p class="text-base sm:text-lg text-zinc-300 leading-relaxed">
+            Vyber si svoji roli a otevři přesně to, co teď potřebuješ vyřešit.
+          </p>
+
+          <!-- Přepínač Kdo jsi -->
+          <div class="space-y-2">
+            <div class="text-sm font-semibold text-zinc-400">Kdo jsi?</div>
+            <div class="grid grid-cols-3 gap-2.5 max-w-lg">
+              <button onclick="selectHomeRole('ridic')" id="home-role-ridic" class="py-3 px-4 rounded-2xl text-sm sm:text-base font-semibold border border-white/10 bg-[#18191D] text-zinc-300 hover:text-white transition">
+                Řidič
+              </button>
+              <button onclick="selectHomeRole('dispecer')" id="home-role-dispecer" class="py-3 px-4 rounded-2xl text-sm sm:text-base font-semibold border border-white/10 bg-[#18191D] text-zinc-300 hover:text-white transition">
+                Dispečer
+              </button>
+              <button onclick="selectHomeRole('majitel')" id="home-role-majitel" class="py-3 px-4 rounded-2xl text-sm sm:text-base font-semibold border border-white/10 bg-[#18191D] text-zinc-300 hover:text-white transition">
+                Majitel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rychlá prověrka spedice vpravo -->
+        <div class="lg:col-span-5 bg-[#141518]/90 border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-base font-bold text-white">Rychlá prověrka spedice</span>
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-500/15 text-orange-300 border border-orange-500/30">ARES &amp; DPH</span>
+          </div>
+          <p class="text-sm text-zinc-400">
+            Zadej IČO nebo název firmy dřív, než vezmeš zakázku.
+          </p>
+          <form onsubmit="quickCheckSpedice(event)" class="space-y-3">
+            <input type="text" id="hero-ico" placeholder="Např. 45314251 nebo název spedice..."
+                   class="w-full bg-[#1C1D22] border border-white/15 focus:border-orange-500 rounded-xl px-4 py-3 text-base text-white focus:outline-none">
+            <button type="submit" class="w-full trukon-btn text-base py-3 rounded-xl transition">
+              Ověřit spedici →
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 2. HLAVNÍ NÁSTROJE (3 KINGS) -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold text-white">3 hlavní nástroje</h2>
+      </div>
+
+      <div id="kings-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        <!-- KING 1: Prověrka spedice -->
+        <a href="spedice-check.html" data-roles="dispecer,majitel" class="tool-card trukon-card rounded-3xl p-6 flex flex-col justify-between hover:scale-[1.01] transition">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="w-11 h-11 rounded-2xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-xl">🛡️</span>
+              <span class="text-xs font-semibold px-3 py-1 rounded-full bg-orange-500/15 text-orange-300 border border-orange-500/30">Dispečer &amp; Majitel</span>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-white">Prověrka spedice &amp; CMR</h3>
+              <p class="text-sm text-zinc-300 mt-1.5 leading-relaxed">
+                Ověří stáří firmy, plátcovství DPH, vytáhne data z objednávky a připraví CMR i podklad k fakturaci.
+              </p>
+            </div>
+          </div>
+          <div class="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-sm font-semibold text-orange-400">
+            <span>Otevřít prověrku</span>
+            <span>→</span>
+          </div>
+        </a>
+
+        <!-- KING 2: Vyplatí se to jet? -->
+        <a href="rentgen.html" data-roles="dispecer,majitel" class="tool-card trukon-card rounded-3xl p-6 flex flex-col justify-between hover:scale-[1.01] transition">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="w-11 h-11 rounded-2xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-xl">💶</span>
+              <span class="text-xs font-semibold px-3 py-1 rounded-full bg-orange-500/15 text-orange-300 border border-orange-500/30">Kalkulačka zisku</span>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-white">Vyplatí se to jet?</h3>
+              <p class="text-sm text-zinc-300 mt-1.5 leading-relaxed">
+                Čistý zisk z jízdy po odečtení nafty, kurzu banky, mýta a leasingu + výpočet tvojí minimální sazby €/km.
+              </p>
+            </div>
+          </div>
+          <div class="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-sm font-semibold text-orange-400">
+            <span>Spočítat jízdu</span>
+            <span>→</span>
+          </div>
+        </a>
+
+        <!-- KING 3: Smím tuhle zakázku jet? -->
+        <a href="tachograf.html" data-roles="ridic,dispecer" class="tool-card trukon-card rounded-3xl p-6 flex flex-col justify-between hover:scale-[1.01] transition">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="w-11 h-11 rounded-2xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-xl">⏱️</span>
+              <span class="text-xs font-semibold px-3 py-1 rounded-full bg-orange-500/15 text-orange-300 border border-orange-500/30">Pravidla 2026</span>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-white">Smím tuhle zakázku jet?</h3>
+              <p class="text-sm text-zinc-300 mt-1.5 leading-relaxed">
+                Tachograf 2,5–3,5t, povinné pauzy, kabotáž a hlášení vyslání řidiče (IMI) pro Německo, Francii a Rakousko.
+              </p>
+            </div>
+          </div>
+          <div class="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-sm font-semibold text-orange-400">
+            <span>Zkontrolovat jízdu</span>
+            <span>→</span>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- 3. PRAKTICKÉ POMŮCKY PRO KAŽDÝ DEN -->
+    <section class="space-y-4">
+      <h2 class="text-xl font-bold text-white">Další nástroje podle potřeby</h2>
+
+      <div id="daily-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <a href="tetris.html" data-roles="ridic,dispecer" class="tool-card trukon-card-subtle hover:border-orange-500/40 rounded-2xl p-5 flex flex-col justify-between transition">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">📦</span>
+              <span class="text-xs font-medium text-zinc-400">Řidič &amp; Dispečer</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">Naložím to a nedostanu pokutu?</h3>
+            <p class="text-sm text-zinc-400 mt-1">
+              Poskládej palety na korbu a zkontroluj váhu i pokuty v Německu a Rakousku.
+            </p>
+          </div>
+          <div class="mt-4 text-sm font-semibold text-orange-400">Poskládat náklad →</div>
+        </a>
+
+        <a href="zakazky.html" data-roles="dispecer,majitel" class="tool-card trukon-card-subtle hover:border-orange-500/40 rounded-2xl p-5 flex flex-col justify-between transition">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🏭</span>
+              <span class="text-xs font-medium text-zinc-400">Majitel &amp; Dispečer</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">Přímé fabriky v ČR</h3>
+            <p class="text-sm text-zinc-400 mt-1">
+              Ukázka výrobních firem v jednotlivých krajích, které expedují zboží na dodávky.
+            </p>
+          </div>
+          <div class="mt-4 text-sm font-semibold text-orange-400">Zobrazit fabriky →</div>
+        </a>
+
+        <a href="diety.html" data-roles="ridic,majitel" class="tool-card trukon-card-subtle hover:border-orange-500/40 rounded-2xl p-5 flex flex-col justify-between transition">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🧾</span>
+              <span class="text-xs font-medium text-zinc-400">Řidič &amp; Majitel</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">Diety, zálohy a účtenky</h3>
+            <p class="text-sm text-zinc-400 mt-1">
+              1-klik zápis přejezdu hranic, vyúčtování hotovostní zálohy a výpočet diet.
+            </p>
+          </div>
+          <div class="mt-4 text-sm font-semibold text-orange-400">Spočítat diety →</div>
+        </a>
+
+        <a href="sledovani.html" data-roles="ridic,dispecer,majitel" class="tool-card trukon-card-subtle hover:border-orange-500/40 rounded-2xl p-5 flex flex-col justify-between transition">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">📍</span>
+              <span class="text-xs font-medium text-zinc-400">Všechny role</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">Sledování, Palety &amp; ESG</h3>
+            <p class="text-sm text-zinc-400 mt-1">
+              Sdílený odkaz s dojezdem pro spedici, podpis na displeji, paletové konto a CO₂ certifikát.
+            </p>
+          </div>
+          <div class="mt-4 text-sm font-semibold text-orange-400">Otevřít kartu jízdy →</div>
+        </a>
+
+        <a href="skener.html" data-roles="ridic" class="tool-card trukon-card-subtle hover:border-orange-500/40 rounded-2xl p-5 flex flex-col justify-between transition">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">📷</span>
+              <span class="text-xs font-medium text-zinc-400">Pro řidiče</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">Noční skener CMR</h3>
+            <p class="text-sm text-zinc-400 mt-1">
+              Odstraní stíny z fotky v kabině a jedním klikem pošle vyčištěné CMR šéfovi.
+            </p>
+          </div>
+          <div class="mt-4 text-sm font-semibold text-orange-400">Vyfotit CMR →</div>
+        </a>
+
+        <div data-roles="majitel" class="tool-card trukon-card-subtle rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">📊</span>
+              <span class="text-xs font-medium text-zinc-400">Pro majitele</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">Výplaty, Nafta &amp; Upomínky</h3>
+            <p class="text-sm text-zinc-400 mt-1">
+              Srovnání modelů výplat řidičů, tankovacích karet a generátor upomínek neplatičům.
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2 mt-4">
+            <a href="vyplaty.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium text-white">Výplaty</a>
+            <a href="nafta.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium text-white">Nafta</a>
+            <a href="upominky.html" class="px-3 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 text-sm font-medium text-orange-300">Upomínka +40 €</a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 4. DISPEČERSKÁ NÁSTĚNKA & MAPA FLOTILY (UKÁZKA SYSTÉMU) -->
+    <section class="trukon-card rounded-3xl p-6 sm:p-8">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div class="max-w-2xl space-y-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-orange-300 bg-orange-500/15 border border-orange-500/30 px-3 py-1 rounded-full">
+            Přehled flotily na jedné obrazovce
+          </span>
+          <h2 class="text-2xl font-bold text-white pt-1">
+            Dispečerská nástěnka a mapa aut
+          </h2>
+          <p class="text-base text-zinc-300 leading-relaxed">
+            Jednoduchá nástěnka přeprav, aut a řidičů bez nepřehledných tabulek. Přizpůsobí se podle toho, jestli se dívá řidič, dispečer nebo majitel.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-3 shrink-0">
+          <a href="dispecink.html" class="trukon-btn px-6 py-3.5 rounded-2xl text-base transition">
+            Otevřít nástěnku
+          </a>
+          <a href="trasy.html" class="bg-[#1C1D22] hover:bg-zinc-800 border border-white/15 text-white font-semibold px-5 py-3.5 rounded-2xl text-base transition">
+            Mapa aut
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(true);
+
+    // Záloha všech 9 karet v původním pořadí
+    const allCardsPool = Array.from(document.querySelectorAll(".tool-card"));
+
+    // Nahradí emotikony za ploché SVG ikony
+    const ICON_MAP = {
+      "🛡️": "shield", "💶": "calc", "⏱️": "clock", "📦": "box",
+      "🏭": "factory", "🧾": "receipt", "📍": "pin", "📷": "scan", "📊": "chart"
+    };
+    allCardsPool.forEach(card => {
+      card.querySelectorAll("span").forEach(el => {
+        const txt = el.textContent.trim();
+        if (ICON_MAP[txt]) {
+          el.innerHTML = window.APP.svg(ICON_MAP[txt], "w-5 h-5 text-orange-400");
+        }
+      });
+    });
+
+    function selectHomeRole(role) {
+      window.APP.setRole(role);
+    }
+
+    // Fyzicky přesune všechny karty pro vybranou roli nahoru a ostatní karty dolů (žádné poloprůhledné karty nahoře!)
+    window.onRoleChanged = (role) => {
+      ["ridic", "dispecer", "majitel"].forEach(r => {
+        const btn = document.getElementById(`home-role-${r}`);
+        if (!btn) return;
+        const labels = { ridic: "Řidič", dispecer: "Dispečer", majitel: "Majitel" };
+        btn.textContent = labels[r];
+        btn.className = r === role
+          ? "py-3 px-4 rounded-2xl text-sm sm:text-base font-bold trukon-pill-active transition"
+          : "py-3 px-4 rounded-2xl text-sm sm:text-base font-semibold border border-white/10 bg-[#18191D] text-zinc-300 hover:text-white transition";
+      });
+
+      const hintEl = document.getElementById("role-hint-label");
+      if (hintEl) hintEl.textContent = "";
+
+      const topGrid = document.getElementById("kings-grid");
+      const botGrid = document.getElementById("daily-grid");
+      if (!topGrid || !botGrid) return;
+
+      topGrid.innerHTML = "";
+      botGrid.innerHTML = "";
+
+      const matching = allCardsPool.filter(c => (c.getAttribute("data-roles") || "").split(",").includes(role));
+      const others = allCardsPool.filter(c => !(c.getAttribute("data-roles") || "").split(",").includes(role));
+
+      matching.forEach(card => {
+        card.style.opacity = "1";
+        card.style.outline = "none";
+        topGrid.appendChild(card);
+      });
+
+      others.forEach(card => {
+        card.style.opacity = "0.85";
+        card.style.outline = "none";
+        botGrid.appendChild(card);
+      });
+    };
+
+    function quickCheckSpedice(e) {
+      e.preventDefault();
+      const val = document.getElementById("hero-ico").value.trim();
+      location.href = val ? `spedice-check.html?ico=${encodeURIComponent(val)}` : "spedice-check.html";
+    }
+
+    window.onRoleChanged(window.APP.getRole());
+  </script>
+</body>
+</html>

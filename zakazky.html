@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Přímé fabriky v ČR — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-20 flex-1 w-full">
+
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+      <div>
+        <span class="inline-flex items-center gap-2 text-xs font-semibold text-orange-300 bg-orange-500/15 border border-orange-500/30 px-3 py-1 rounded-full mb-2">
+          Ověřené výrobní firmy z ARES (CZ-NACE 10–33)
+        </span>
+        <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          Přímé fabriky pro dodávky do 3,5t (Bez spedice)
+        </h1>
+        <p class="text-base text-zinc-300 mt-1">
+          Středně velké výrobní firmy v ČR, které expedují paletové zboží vhodné pro dodávky + přímý kontakt na expedici a připravený text hovoru.
+        </p>
+      </div>
+
+      <div class="trukon-card-subtle rounded-2xl px-4 py-3 shrink-0 text-sm">
+        <span class="text-zinc-400">Moje oslovené fabriky:</span>
+        <strong id="crm-stats" class="text-orange-300 ml-1">0 osloveno • 0 jezdíme</strong>
+      </div>
+    </div>
+
+    <!-- FILTRY -->
+    <div class="trukon-card rounded-3xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <select id="f-region" onchange="renderLeads()" class="bg-[#141518] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none">
+          <option value="all">Všechny kraje ČR</option>
+        </select>
+
+        <select id="f-trigger" onchange="renderLeads()" class="bg-[#141518] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none">
+          <option value="all">Všechny typy příležitostí</option>
+          <option value="expedice">Přímý kontakt na expedici / dopravu</option>
+          <option value="export">Exportní výroba (směr DE / AT / EU)</option>
+          <option value="rozsireni">Rozšíření výroby / nábor do skladu</option>
+        </select>
+
+        <select id="f-status" onchange="renderLeads()" class="bg-[#141518] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none">
+          <option value="all">Všechny stavy</option>
+          <option value="none">Dosud neoslovené</option>
+          <option value="called">Zavoláno / Poslána nabídka</option>
+          <option value="won">Jezdíme pro ně</option>
+        </select>
+      </div>
+
+      <input type="text" id="f-search" oninput="renderLeads()" placeholder="Hledat obor, město nebo IČO..."
+             class="bg-[#141518] border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white w-full sm:w-64 focus:outline-none">
+    </div>
+
+    <!-- SEZNAM KARET FABRIK -->
+    <div id="leads-container" class="space-y-5"></div>
+
+    <!-- SPODNÍ KARTA -->
+    <div class="mt-8 trukon-card rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+      <div class="space-y-1 max-w-2xl">
+        <h3 class="text-lg font-bold text-white">
+          Chceš dostávat každé pondělí nové fabriky přesně v okruhu 40 km od tvé základny?
+        </h3>
+        <p class="text-sm text-zinc-300">
+          Umíme pro tebe hlídat nové dotace na stroje, nové inzeráty na skladníky/řidiče a exportní firmy ve tvém okrese — a posílat je jen tobě.
+        </p>
+      </div>
+      <button onclick="window.APP.openWantModal('Týdenní přísun přímých výrobních firem v mém okrese')"
+              class="shrink-0 px-6 py-3.5 rounded-2xl text-sm trukon-btn transition">
+        Napište mi na WhatsApp
+      </button>
+    </div>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script src="leads-data.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    let crmState = JSON.parse(localStorage.getItem("dodavkari_leads_crm") || "{}");
+
+    function populateRegions() {
+      const sel = document.getElementById("f-region");
+      const counts = {};
+      (window.LEADS_DATA || []).forEach(l => {
+        counts[l.region] = (counts[l.region] || 0) + 1;
+      });
+      sel.innerHTML = `<option value="all">Všechny kraje ČR (${(window.LEADS_DATA || []).length} fabrik)</option>` +
+        Object.keys(counts).sort().map(r => `<option value="${r}">${r} (${counts[r]})</option>`).join("");
+    }
+
+    function saveCrm(leadId, field, value) {
+      if (!crmState[leadId]) crmState[leadId] = { status: "none", note: "" };
+      crmState[leadId][field] = value;
+      localStorage.setItem("dodavkari_leads_crm", JSON.stringify(crmState));
+      renderLeads();
+    }
+
+    function updateStats() {
+      const vals = Object.values(crmState);
+      const called = vals.filter(v => v.status === "called").length;
+      const won = vals.filter(v => v.status === "won").length;
+      document.getElementById("crm-stats").textContent = `${called} osloveno • ${won} jezdíme`;
+    }
+
+    async function verifyLiveAres(ico, btnEl, targetDivId) {
+      btnEl.textContent = "Ověřuji v ARES...";
+      const box = document.getElementById(targetDivId);
+      box.classList.remove("hidden");
+
+      try {
+        const res = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${ico}`);
+        if (!res.ok) throw new Error("Chyba spojení");
+        const data = await res.json();
+        const dic = data.dic || "Neuvedeno";
+        const sidlo = data.sidlo?.textovaAdresa || "";
+        const naceList = (data.czNace || []).slice(0, 4).join(", ");
+        const datumVzniku = data.datumVzniku ? new Date(data.datumVzniku).toLocaleDateString("cs-CZ") : "";
+
+        box.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 text-emerald-300 font-semibold">
+            <span>✓ Živý výpis z ARES: Subjekt je AKTIVNÍ</span>
+            <span>IČO: ${ico} • DIČ: ${dic}</span>
+          </div>
+          <div class="text-zinc-300 mt-1">
+            <strong>Oficiální sídlo:</strong> ${sidlo} • <strong>Založeno:</strong> ${datumVzniku} • <strong>CZ-NACE:</strong> ${naceList}
+          </div>
+        `;
+        btnEl.textContent = "✓ Ověřeno v ARES";
+      } catch (e) {
+        box.innerHTML = `<span class="text-orange-300">Nepodařilo se spojit s ARES API.</span>`;
+        btnEl.textContent = "Ověřit živě v ARES";
+      }
+    }
+
+    function copyScript(text, btn) {
+      navigator.clipboard.writeText(text);
+      const old = btn.textContent;
+      btn.textContent = "✓ Zkopírováno";
+      setTimeout(() => btn.textContent = old, 2000);
+    }
+
+    function pushFactoryToKanban(leadId) {
+      const lead = (window.LEADS_DATA || []).find(l => l.id === leadId);
+      if (!lead) return;
+      saveCrm(leadId, "status", "called");
+
+      const savedKanban = JSON.parse(localStorage.getItem("dodavkari_kanban_clean_v4") || "null");
+      if (savedKanban) {
+        savedKanban.cards.unshift({
+          id: "c-" + Date.now(),
+          colId: savedKanban.columns[0].id,
+          code: "Přímá fabrika",
+          loaded: false,
+          loadDate: "Domluvit",
+          unloadDate: "",
+          customer: lead.name,
+          eur: 0,
+          firmN: lead.name,
+          addrN: "",
+          cityN: lead.city,
+          firmV: "",
+          addrV: "",
+          cityV: "Dle poptávky (EU / ČR)",
+          pal: "8–10 pal.",
+          kg: "do 900 kg",
+          van: savedKanban.fleet[0]?.code || "Master #1",
+          transship: "",
+          palletsDebt: ""
+        });
+        localStorage.setItem("dodavkari_kanban_clean_v4", JSON.stringify(savedKanban));
+      }
+      alert(`Fabrika „${lead.name}“ byla uložena do tvé Dispečerské nástěnky.`);
+    }
+
+    function renderLeads() {
+      updateStats();
+      const reg = document.getElementById("f-region").value;
+      const trig = document.getElementById("f-trigger").value;
+      const stat = document.getElementById("f-status").value;
+      const q = document.getElementById("f-search").value.trim().toLowerCase();
+      const myVan = window.APP.getActiveVan();
+
+      const filtered = (window.LEADS_DATA || []).filter(l => {
+        const c = crmState[l.id] || { status: "none", note: "" };
+        if (reg !== "all" && l.region !== reg) return false;
+        if (trig !== "all" && l.triggerCategory !== trig) return false;
+        if (stat !== "all" && c.status !== stat) return false;
+        if (q && !(l.name.toLowerCase().includes(q) || l.city.toLowerCase().includes(q) || l.whatTheyMake.toLowerCase().includes(q) || l.ico.includes(q))) return false;
+        return true;
+      });
+
+      const container = document.getElementById("leads-container");
+      container.innerHTML = filtered.map(l => {
+        const c = crmState[l.id] || { status: "none", note: "" };
+        const mailSubject = encodeURIComponent(`Nabídka přímé autodopravy do 3,5t (${myVan.name})`);
+        const mailBody = encodeURIComponent(`${l.callScript}\n\nDisponujeme vozy: ${myVan.name} (nosnost ${myVan.payloadKg} kg, ložná plocha ${myVan.lengthCm}x${myVan.widthCm} cm).\n\nS pozdravem`);
+
+        return `
+          <article class="trukon-card rounded-3xl p-5 sm:p-6 space-y-3.5">
+            
+            <!-- 1. HLAVNÍ PŘEHLED KARTY (Vždy viditelný, čistý a nepřehlcený) -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <h2 class="text-lg sm:text-xl font-bold text-white">${l.name}</h2>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-zinc-300">IČO ${l.ico}</span>
+                  ${l.urgencyScore ? `<span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300">Urgence ${l.urgencyScore} %</span>` : ``}
+                </div>
+                <div class="text-sm text-zinc-300 mt-1">
+                  <strong class="text-orange-300">${l.region}</strong> (${l.city}) • Doporučené auto: <strong>${l.recommendedVan}</strong>
+                </div>
+              </div>
+
+              <select onchange="saveCrm('${l.id}', 'status', this.value)"
+                      class="self-start sm:self-auto bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-semibold text-white">
+                <option value="none" ${c.status === 'none' ? 'selected' : ''}>Neosloveno</option>
+                <option value="called" ${c.status === 'called' ? 'selected' : ''}>Zavoláno / Nabídka</option>
+                <option value="won" ${c.status === 'won' ? 'selected' : ''}>Jezdíme pro ně</option>
+              </select>
+            </div>
+
+            <!-- Rychlý kontakt (Hned po ruce) -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/10 text-sm">
+              <div class="flex flex-wrap items-center gap-4">
+                <span class="font-semibold text-white">${l.contactPerson}</span>
+                <a href="tel:${l.contactPhone.split('/')[0].trim()}" class="text-emerald-400 font-bold hover:underline">${l.contactPhone}</a>
+                <a href="mailto:${l.contactEmail}?subject=${mailSubject}&body=${mailBody}" class="text-orange-300 hover:underline">${l.contactEmail}</a>
+                <a href="${l.web}" target="_blank" rel="noopener" class="text-zinc-400 hover:text-white underline">Web ↗</a>
+              </div>
+            </div>
+
+            <!-- 2. ROZKLIKÁVACÍ DETAIL (Co vyrábí, důvod urgence, text hovoru do telefonu a živý ARES) -->
+            <details class="pt-2 border-t border-white/10 text-sm group">
+              <summary class="cursor-pointer text-xs font-semibold text-orange-300 hover:text-orange-200 select-none flex items-center justify-between py-1">
+                <span>Zobrazit detail výroby, důvod urgence a co říct do telefonu ▾</span>
+                <span class="text-zinc-400 font-normal">Obor: ${l.nace}</span>
+              </summary>
+
+              <div class="mt-3.5 space-y-3.5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div class="bg-[#141518] border border-white/10 rounded-2xl p-3.5">
+                    <div class="font-bold text-zinc-400 uppercase mb-1">Co vyrábí a expedují</div>
+                    <p class="text-zinc-200 leading-relaxed">${l.whatTheyMake}</p>
+                  </div>
+                  <div class="bg-[#141518] border border-white/10 rounded-2xl p-3.5">
+                    <div class="font-bold text-emerald-400 uppercase mb-1">Proč dodávka do 3,5t</div>
+                    <p class="text-zinc-200 leading-relaxed">${l.whyVanFriendly}</p>
+                  </div>
+                  <div class="bg-[#141518] border border-white/10 rounded-2xl p-3.5">
+                    <div class="font-bold text-orange-300 uppercase mb-1">Důvod oslovení</div>
+                    <p class="text-zinc-200 leading-relaxed">${l.urgencyTrigger}</p>
+                  </div>
+                </div>
+
+                <!-- Co říct do telefonu -->
+                <div class="bg-[#141518] border border-white/10 rounded-2xl p-4 space-y-2">
+                  <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <span class="text-xs font-bold text-orange-300 uppercase">Co přesně říct při hovoru na expedici:</span>
+                    <div class="flex gap-2">
+                      <button onclick="copyScript('${(l.callScript || '').replace(/'/g, "\\'")}', this)" class="bg-white/10 hover:bg-white/15 text-white px-3 py-1 rounded-xl text-xs font-semibold">
+                        Zkopírovat řeč
+                      </button>
+                      <button onclick="verifyLiveAres('${l.ico}', this, 'ares-box-${l.id}')" class="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-xl text-xs font-semibold">
+                        Ověřit živě v ARES
+                      </button>
+                      <button onclick="pushFactoryToKanban('${l.id}')" class="trukon-btn px-3 py-1 rounded-xl text-xs">
+                        + Do nástěnky
+                      </button>
+                    </div>
+                  </div>
+                  <p class="text-zinc-200 italic text-xs leading-relaxed">„${l.callScript}“</p>
+                  <div id="ares-box-${l.id}" class="hidden bg-emerald-950/40 border border-emerald-600/50 rounded-xl p-3 text-xs mt-2"></div>
+                </div>
+
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="text-zinc-400 shrink-0">Moje poznámka:</span>
+                  <input type="text" value="${c.note || ''}" onchange="saveCrm('${l.id}', 'note', this.value)"
+                         placeholder="Zapiš si výsledek hovoru..."
+                         class="flex-1 bg-transparent border-b border-white/10 focus:border-orange-500 px-2 py-1 text-zinc-200 focus:outline-none">
+                </div>
+              </div>
+            </details>
+
+          </article>
+        `;
+      }).join("");
+    }
+
+    populateRegions();
+    renderLeads();
+  </script>
+</body>
+</html>

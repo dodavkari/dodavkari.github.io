@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sledování, Paletové konto & ESG Certifikát — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #esg-print-sheet, #esg-print-sheet * { visibility: visible; }
+      #esg-print-sheet { position: absolute; left: 0; top: 0; width: 100%; display: block !important; background: white !important; color: black !important; padding: 32px !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-24 flex-1 w-full">
+
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Sledování jízdy, Palety &amp; ESG</h1>
+        <p class="text-base text-zinc-300 mt-1">
+          Sdílej spedici živý čas dojezdu, pohlídej vrácené EUR palety a vytiskni ESG certifikát.
+        </p>
+      </div>
+      <button onclick="copyTrackingLink()" id="btn-share-eta" class="self-start text-sm trukon-btn px-4 py-2.5 rounded-xl transition shrink-0">
+        🔗 Zkopírovat sledovací odkaz
+      </button>
+    </div>
+
+    <div id="customer-banner" class="hidden mb-5 bg-[#141518] border border-orange-500/40 rounded-2xl p-4 flex items-center justify-between text-sm text-zinc-200">
+      <div>
+        <strong>👁️ Náhled pro zákazníka:</strong> Takhle vidí stav přepravy spedice po otevření tvého odkazu.
+      </div>
+      <a href="sledovani.html" class="underline font-semibold text-orange-300 shrink-0 ml-3">Zpět</a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEVÁ ČÁST: Stav jízdy + Paletové konto -->
+      <div class="lg:col-span-6 space-y-5">
+        
+        <div class="trukon-card rounded-3xl p-6 space-y-4">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span id="status-pill" class="text-xs font-semibold text-orange-300 bg-orange-500/15 border border-orange-500/30 px-3 py-1 rounded-full">
+                ● Na trase
+              </span>
+              <input type="text" id="tr-route" value="CZ Plzeň ➔ DE Mannheim" oninput="calcEta()"
+                     class="block w-full bg-transparent text-xl font-bold text-white mt-2 focus:outline-none">
+            </div>
+            <div class="text-right text-sm text-zinc-300 shrink-0">
+              <div>Auto: <strong id="tr-van" class="text-white">Master #1</strong></div>
+              <div>Dojezd: <strong id="tr-eta" class="text-orange-300 text-base">14:35</strong></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <label class="block text-zinc-400 mb-1">Zbývá do cíle (km)</label>
+              <input type="number" id="tr-rem-km" value="240" oninput="calcEta()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-white font-bold">
+            </div>
+            <div>
+              <label class="block text-zinc-400 mb-1">Provoz po trase</label>
+              <select id="tr-traffic" onchange="calcEta()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-white">
+                <option value="0">Plynulý (+0 min)</option>
+                <option value="25" selected>Hustý provoz (+25 min)</option>
+                <option value="55">Kolona (+55 min)</option>
+                <option value="45">Pauza 45 min</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2 pt-1 text-center text-xs">
+            <div class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 py-2 rounded-xl font-semibold">1. Přijato</div>
+            <div class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 py-2 rounded-xl font-semibold">2. Naloženo</div>
+            <div class="trukon-pill-active py-2 rounded-xl font-bold">3. Na trase</div>
+            <div id="step-unloaded" class="bg-[#141518] border border-white/10 text-zinc-400 py-2 rounded-xl font-semibold">4. Vyloženo</div>
+          </div>
+        </div>
+
+        <!-- Paletové konto -->
+        <div class="trukon-card rounded-3xl p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-white">🔄 Paletové konto (EUR palety)</h2>
+              <p class="text-sm text-zinc-400">Zapiš nevrácené palety na vykládce.</p>
+            </div>
+            <button onclick="exportPalletsCsv()" class="text-xs text-zinc-200 hover:text-white bg-[#141518] border border-white/15 px-3 py-1.5 rounded-xl">
+              ⬇ Export CSV
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-sm">
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Spedice / Sklad</label>
+              <input type="text" id="pal-firm" value="Mannheim Logistik" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Naloženo (ks)</label>
+              <input type="number" id="pal-in" value="10" oninput="calcPallets()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white font-bold">
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Vráceno (ks)</label>
+              <input type="number" id="pal-out" value="8" oninput="calcPallets()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white font-bold">
+            </div>
+          </div>
+
+          <div id="pal-verdict" class="p-3.5 rounded-2xl text-sm font-medium"></div>
+
+          <div class="flex flex-wrap gap-2">
+            <button onclick="savePalletRecord()" class="trukon-btn text-xs px-4 py-2.5 rounded-xl transition">
+              + Zapsat dluh
+            </button>
+            <button onclick="togglePalletClaim()" id="btn-pal-claim" class="bg-white/10 hover:bg-white/15 text-orange-300 font-semibold text-xs px-4 py-2.5 rounded-xl transition">
+              ⚖️ Výzva k úhradě palet
+            </button>
+          </div>
+
+          <div id="pal-claim-box" class="hidden space-y-2 pt-2 border-t border-white/10">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-orange-300 font-semibold">Výzva k vrácení / proplacení palet (15 €/ks):</span>
+              <button onclick="copyPalletClaim()" id="btn-copy-pal" class="text-white underline font-semibold">Zkopírovat</button>
+            </div>
+            <pre id="pal-claim-text" class="whitespace-pre-wrap text-xs text-zinc-200 bg-[#141518] border border-white/10 rounded-xl p-3"></pre>
+          </div>
+
+          <div class="pt-2 border-t border-white/10 space-y-2">
+            <div class="flex items-center justify-between text-xs text-zinc-400">
+              <span>Uložené dluhy palet</span>
+              <span id="pal-total-debt" class="text-red-400 font-bold"></span>
+            </div>
+            <div id="pal-ledger-list" class="space-y-1.5 text-sm"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- PRAVÁ ČÁST: Podpis na displeji + ESG -->
+      <div class="lg:col-span-6 space-y-5">
+
+        <div class="trukon-card rounded-3xl p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-white">✍️ Podpis převzetí na displeji</h2>
+              <p class="text-sm text-zinc-400">Skladník podepíše převzetí zboží prstem</p>
+            </div>
+            <button onclick="clearSig()" class="text-xs text-zinc-300 hover:text-white bg-[#141518] border border-white/15 px-3 py-1.5 rounded-xl">Smazat</button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm">
+            <input type="text" id="pod-name" placeholder="Jméno skladníka"
+                   class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-white">
+            <label class="flex items-center justify-center gap-1.5 bg-[#141518] hover:bg-zinc-800 border border-white/15 rounded-xl px-3.5 py-2.5 text-zinc-200 cursor-pointer transition">
+              <span>📷</span> <span id="pod-photo-lbl">Fotka vykládky</span>
+              <input type="file" accept="image/*" capture="environment" onchange="onPodPhoto(event)" class="hidden">
+            </label>
+          </div>
+
+          <div class="bg-white rounded-2xl overflow-hidden border-2 border-zinc-700">
+            <canvas id="sig-canvas" width="460" height="165" class="w-full h-[165px] cursor-crosshair touch-none"></canvas>
+          </div>
+
+          <button onclick="confirmDelivery()" id="btn-pod" class="w-full trukon-btn text-sm py-3.5 rounded-xl transition">
+            ✓ Potvrdit vykládku
+          </button>
+        </div>
+
+        <!-- ESG Certifikát -->
+        <div class="trukon-card-subtle rounded-3xl p-6 space-y-4">
+          <div>
+            <h2 class="text-base font-bold text-white">🌱 ESG &amp; CO₂ Certifikát pro spedice</h2>
+            <p class="text-sm text-zinc-400">Vytiskni potvrzení o emisích podle normy ISO 14083.</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-sm">
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Nájezd (km)</label>
+              <input type="number" id="esg-km" value="11500" oninput="calcEsg()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white font-bold">
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Spotřeba (l/100)</label>
+              <input type="number" step="0.1" id="esg-cons" value="11.8" oninput="calcEsg()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white font-bold">
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Pro klienta</label>
+              <input type="text" id="esg-client" value="DHL / Schenker" oninput="calcEsg()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3 py-2 text-white">
+            </div>
+          </div>
+
+          <div class="bg-[#141518] border border-white/10 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <div>
+              <div class="text-zinc-400">Nafta: <strong id="esg-liters" class="text-white">1 357 l</strong></div>
+              <div class="text-zinc-400 mt-0.5">Uhlíková stopa: <strong id="esg-co2" class="text-emerald-400">4 288 kg CO₂e</strong></div>
+            </div>
+            <button onclick="window.print()" class="bg-white/10 hover:bg-white/15 text-white font-semibold px-4 py-2.5 rounded-xl transition shrink-0">
+              🖨️ Tisk PDF certifikátu
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Tisková šablona ESG -->
+    <div id="esg-print-sheet" class="hidden space-y-6 text-sm">
+      <div class="border-b-2 border-black pb-4 flex justify-between items-start">
+        <div>
+          <div class="text-xs uppercase">ESG SCOPE 3 REPORT • EN ISO 14083</div>
+          <h1 class="text-2xl font-bold mt-1">CERTIFIKÁT UHLÍKOVÉ STOPY PŘEPRAVY</h1>
+        </div>
+        <div id="pr-esg-date" class="text-xs"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4 text-xs border border-black p-4">
+        <div><strong>Dopravce (Vozidlo):</strong> <span id="pr-esg-van"></span></div>
+        <div><strong>Odběratel:</strong> <span id="pr-esg-client"></span></div>
+        <div><strong>Metodika:</strong> EN ISO 14083 (3,16 kg CO₂e / l nafty)</div>
+        <div><strong>Ujetá vzdálenost:</strong> <span id="pr-esg-km"></span> km</div>
+      </div>
+      <div class="border-2 border-black p-5 space-y-2">
+        <div class="text-xs uppercase font-bold">Celkové emise skleníkových plynů:</div>
+        <div class="text-xl font-bold" id="pr-esg-total"></div>
+        <div class="text-xs" id="pr-esg-intensity"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    const PAL_KEY = "dodavkari_pallet_ledger_v1";
+    const activeVan = window.APP.getActiveVan();
+    document.getElementById("tr-van").textContent = activeVan.name.split("•")[0].trim();
+    if (activeVan.consumption) document.getElementById("esg-cons").value = activeVan.consumption;
+
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get("view") === "customer") {
+      document.getElementById("customer-banner").classList.remove("hidden");
+      if (urlParams.get("route")) document.getElementById("tr-route").value = urlParams.get("route");
+      if (urlParams.get("km")) document.getElementById("tr-rem-km").value = urlParams.get("km");
+    }
+
+    function calcEta() {
+      const remKm = Number(document.getElementById("tr-rem-km").value) || 0;
+      const delayMin = Number(document.getElementById("tr-traffic").value) || 0;
+      const driveMinutes = Math.round((remKm / 82) * 60) + delayMin;
+      const etaDate = new Date(Date.now() + driveMinutes * 60000);
+      const hh = String(etaDate.getHours()).padStart(2, "0");
+      const mm = String(etaDate.getMinutes()).padStart(2, "0");
+      document.getElementById("tr-eta").textContent = `Dnes ${hh}:${mm}`;
+    }
+
+    function copyTrackingLink() {
+      const route = encodeURIComponent(document.getElementById("tr-route").value);
+      const km = encodeURIComponent(document.getElementById("tr-rem-km").value);
+      const shareUrl = `${location.origin}${location.pathname}?view=customer&route=${route}&km=${km}`;
+      navigator.clipboard?.writeText(shareUrl);
+      const btn = document.getElementById("btn-share-eta");
+      btn.textContent = "✓ Odkaz zkopírován";
+      setTimeout(() => (btn.textContent = "🔗 Zkopírovat sledovací odkaz"), 2500);
+    }
+
+    function calcPallets() {
+      const firm = document.getElementById("pal-firm").value.trim() || "Spedice";
+      const pIn = Number(document.getElementById("pal-in").value) || 0;
+      const pOut = Number(document.getElementById("pal-out").value) || 0;
+      const diff = pIn - pOut;
+      const v = document.getElementById("pal-verdict");
+
+      if (diff > 0) {
+        const eurVal = diff * 15;
+        v.className = "p-3.5 rounded-2xl text-sm font-semibold bg-red-950/50 border border-red-700 text-red-200";
+        v.textContent = `⚠️ Sklad vrátil o ${diff} ks EUR palet méně (dluh ${eurVal} €).`;
+        document.getElementById("pal-claim-text").textContent =
+          `VÝZVA K VYROVNÁNÍ PALETOVÉHO KONTA (${firm})\n\n` +
+          `Při vykládce na trase (${document.getElementById("tr-route").value}) bylo předáno ${pIn} ks EUR palet, ale vráceno pouze ${pOut} ks.\n` +
+          `Nevrácený rozdíl: ${diff} ks EUR palet.\n` +
+          `Žádáme o vrácení palet nebo úhradu ${eurVal} EUR do 14 dnů.`;
+      } else {
+        v.className = "p-3.5 rounded-2xl text-sm font-semibold bg-emerald-950/40 border border-emerald-700 text-emerald-200";
+        v.textContent = `✓ Všechny EUR palety (${pIn} ks) byly vyměněny kus za kus.`;
+      }
+    }
+
+    function togglePalletClaim() {
+      calcPallets();
+      document.getElementById("pal-claim-box").classList.toggle("hidden");
+    }
+
+    function copyPalletClaim() {
+      navigator.clipboard?.writeText(document.getElementById("pal-claim-text").textContent);
+      const b = document.getElementById("btn-copy-pal");
+      b.textContent = "✓ Zkopírováno";
+      setTimeout(() => (b.textContent = "Zkopírovat"), 2000);
+    }
+
+    function loadLedger() {
+      try {
+        return JSON.parse(localStorage.getItem(PAL_KEY) || '[{"firm":"Mannheim Logistik","diff":4,"date":"2026-11-08"}]');
+      } catch (e) { return []; }
+    }
+
+    function saveLedger(arr) {
+      localStorage.setItem(PAL_KEY, JSON.stringify(arr));
+      renderLedger();
+    }
+
+    function savePalletRecord() {
+      const firm = document.getElementById("pal-firm").value.trim() || "Spedice";
+      const diff = (Number(document.getElementById("pal-in").value) || 0) - (Number(document.getElementById("pal-out").value) || 0);
+      if (diff === 0) return;
+      const arr = loadLedger();
+      arr.unshift({ firm, diff, date: new Date().toISOString().slice(0, 10) });
+      saveLedger(arr);
+    }
+
+    function removeLedgerIdx(idx) {
+      const arr = loadLedger();
+      arr.splice(idx, 1);
+      saveLedger(arr);
+    }
+
+    function renderLedger() {
+      const arr = loadLedger();
+      const total = arr.reduce((s, x) => s + (Number(x.diff) || 0), 0);
+      document.getElementById("pal-total-debt").textContent = `Celkem dluží: ${total} ks (${total * 15} €)`;
+      document.getElementById("pal-ledger-list").innerHTML = arr.length
+        ? arr.map((x, i) => `
+          <div class="flex items-center justify-between bg-[#141518] border border-white/10 rounded-xl px-3.5 py-2">
+            <span class="text-white font-medium truncate">${x.firm} <span class="text-zinc-400 text-xs">(${x.date})</span></span>
+            <span class="flex items-center gap-2 shrink-0">
+              <strong class="text-red-400">-${x.diff} ks (${x.diff * 15} €)</strong>
+              <button onclick="removeLedgerIdx(${i})" class="text-zinc-400 hover:text-emerald-400" title="Vyrovnáno">✓</button>
+            </span>
+          </div>`).join("")
+        : `<div class="text-zinc-400 text-xs">Žádné otevřené dluhy.</div>`;
+    }
+
+    function exportPalletsCsv() {
+      const arr = loadLedger();
+      const csv = "Spedice;Datum;Dluh_EUR_palet;Hodnota_EUR\n" + arr.map(x => `"${x.firm}";${x.date};${x.diff};${x.diff * 15}`).join("\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "paletove-konto.csv";
+      a.click();
+    }
+
+    function calcEsg() {
+      const km = Number(document.getElementById("esg-km").value) || 0;
+      const cons = Number(document.getElementById("esg-cons").value) || 11.8;
+      const client = document.getElementById("esg-client").value || "Odběratel";
+      const liters = Math.round((km / 100) * cons);
+      const co2Kg = Math.round(liters * 3.16);
+      const perKmG = km > 0 ? Math.round((co2Kg * 1000) / km) : 0;
+
+      document.getElementById("esg-liters").textContent = `${liters.toLocaleString("cs-CZ")} l`;
+      document.getElementById("esg-co2").textContent = `${co2Kg.toLocaleString("cs-CZ")} kg CO₂e`;
+
+      document.getElementById("pr-esg-date").textContent = "Datum: " + new Date().toLocaleDateString("cs-CZ");
+      document.getElementById("pr-esg-van").textContent = activeVan.name;
+      document.getElementById("pr-esg-client").textContent = client;
+      document.getElementById("pr-esg-km").textContent = km.toLocaleString("cs-CZ");
+      document.getElementById("pr-esg-total").textContent = `${co2Kg.toLocaleString("cs-CZ")} kg CO₂e (${liters.toLocaleString("cs-CZ")} l nafty)`;
+      document.getElementById("pr-esg-intensity").textContent = `Průměrná intenzita: ${perKmG} g CO₂e / km`;
+    }
+
+    function onPodPhoto(e) {
+      const f = e.target.files?.[0];
+      if (f) document.getElementById("pod-photo-lbl").textContent = "✓ Fotka přiložena";
+    }
+
+    const canvas = document.getElementById("sig-canvas");
+    const ctx = canvas.getContext("2d");
+    let drawing = false;
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+
+    function getPos(e) {
+      const r = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - r.left) * (canvas.width / r.width),
+        y: (clientY - r.top) * (canvas.height / r.height)
+      };
+    }
+
+    canvas.addEventListener("mousedown", (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener("mousemove", (e) => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    window.addEventListener("mouseup", () => drawing = false);
+
+    canvas.addEventListener("touchstart", (e) => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener("touchmove", (e) => { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    window.addEventListener("touchend", () => drawing = false);
+
+    function clearSig() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function confirmDelivery() {
+      document.getElementById("step-unloaded").className = "trukon-pill-active py-2 rounded-xl font-bold";
+      document.getElementById("status-pill").textContent = "✓ Vyloženo";
+      const btn = document.getElementById("btn-pod");
+      btn.textContent = "✓ Vyloženo potvrzeno";
+      savePalletRecord();
+    }
+
+    calcEta();
+    calcPallets();
+    renderLedger();
+    calcEsg();
+  </script>
+</body>
+</html>

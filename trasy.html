@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mapa flotily & Nejbližší auto — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    #map { background: #141518; }
+    .van-marker {
+      background: #FF5526; color: #fff; font-weight: 700; font-size: 12px;
+      padding: 3px 8px; border-radius: 8px; border: 2px solid #fff; white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-24 flex-1 w-full">
+
+    <div class="mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Které auto tam poslat? (Mapa aut)</h1>
+      <p class="text-base text-zinc-300 mt-1">
+        Zadej nakládku, vykládku a cenu. Systém seřadí tvoje auta z nástěnky podle nejvyššího čistého zisku.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEVÝ PANEL -->
+      <div class="lg:col-span-4 trukon-card rounded-3xl p-6 space-y-4">
+        <div>
+          <label class="block text-sm text-zinc-300 mb-1">Město nakládky (Odkud)</label>
+          <input type="text" id="r-from" value="Nürnberg, DE" class="w-full bg-[#141518] border border-white/15 rounded-xl px-4 py-3 text-base text-white font-semibold">
+        </div>
+        <div>
+          <label class="block text-sm text-zinc-300 mb-1">Město vykládky (Kam)</label>
+          <input type="text" id="r-to" value="Lyon, FR" class="w-full bg-[#141518] border border-white/15 rounded-xl px-4 py-3 text-base text-white font-semibold">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm text-zinc-300 mb-1">Cena (EUR)</label>
+            <input type="number" id="r-eur" value="1180" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base text-orange-300 font-bold">
+          </div>
+          <div>
+            <label class="block text-sm text-zinc-300 mb-1">Váha (kg)</label>
+            <input type="number" id="r-kg" value="750" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base text-white font-bold">
+          </div>
+        </div>
+
+        <button onclick="runFleetCalculation()" id="btn-calc" class="w-full trukon-btn text-base py-3.5 rounded-xl transition">
+          Spočítat trasu a najít auto
+        </button>
+
+        <div id="route-summary" class="pt-3 border-t border-white/10 text-sm text-zinc-300 space-y-1"></div>
+      </div>
+
+      <!-- PRAVÝ PANEL -->
+      <div class="lg:col-span-8 space-y-5">
+        <div class="trukon-card rounded-3xl overflow-hidden">
+          <div id="map" class="w-full h-[330px]"></div>
+        </div>
+
+        <div class="trukon-card-subtle rounded-3xl p-6">
+          <h2 class="text-base font-bold text-white mb-3">Pořadí tvých aut podle čistého zisku:</h2>
+          <div id="vans-ranking" class="space-y-3"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    const map = L.map("map").setView([48.8, 12.5], 5);
+    L.tileLayer("https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=cb1_531k_1_30b906c35ac47226785d72d1", {
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+    let mapLayerGroup = L.layerGroup().addTo(map);
+
+    const KNOWN_COORDS = {
+      "tachov": [49.795, 12.633], "vorchdorf": [48.003, 13.924], "zvolen": [48.574, 19.153],
+      "stadtsteinach": [50.163, 11.505], "praha": [50.075, 14.437], "plzeň": [49.738, 13.373],
+      "nürnberg": [49.452, 11.076], "norimberk": [49.452, 11.076], "lyon": [45.764, 4.835],
+      "mannheim": [49.487, 8.466], "stuttgart": [48.775, 9.182], "milán": [45.464, 9.190]
+    };
+
+    async function geocodeCity(query) {
+      const clean = query.split("(")[0].split(",")[0].trim().toLowerCase();
+      if (KNOWN_COORDS[clean]) return KNOWN_COORDS[clean];
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+        const data = await res.json();
+        if (data && data[0]) return [ parseFloat(data[0].lat), parseFloat(data[0].lon) ];
+      } catch (e) {}
+      return [49.5, 13.0];
+    }
+
+    async function getRoadDistanceKm(coordA, coordB) {
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${coordA[1]},${coordA[0]};${coordB[1]},${coordB[0]}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.routes && data.routes[0]) {
+          return {
+            km: Math.round(data.routes[0].distance / 1000),
+            hours: data.routes[0].duration / 3600,
+            geometry: data.routes[0].geometry
+          };
+        }
+      } catch (e) {}
+      const R = 6371;
+      const dLat = (coordB[0] - coordA[0]) * Math.PI / 180;
+      const dLon = (coordB[1] - coordA[1]) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(coordA[0]*Math.PI/180)*Math.cos(coordB[0]*Math.PI/180)*Math.sin(dLon/2)**2;
+      const km = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 1.26);
+      return { km, hours: km / 82, geometry: null };
+    }
+
+    async function runFleetCalculation() {
+      const btn = document.getElementById("btn-calc");
+      btn.textContent = "Počítám trasy...";
+
+      const fromStr = document.getElementById("r-from").value;
+      const toStr = document.getElementById("r-to").value;
+      const eur = Number(document.getElementById("r-eur").value) || 0;
+      const cargoKg = Number(document.getElementById("r-kg").value) || 750;
+
+      const savedKanban = JSON.parse(localStorage.getItem("dodavkari_kanban_clean_v4") || "null");
+      const fleet = savedKanban ? savedKanban.fleet : [
+        { code: "Master #1", driver: "Jan Novák", city: "Plzeň" },
+        { code: "Master #2", driver: "Petr Svoboda", city: "Linz (AT)" },
+        { code: "Ducato #3", driver: "Martin Dvořák", city: "Brno" },
+        { code: "Sprinter #4", driver: "Tomáš Černý", city: "Norimberk (DE)" }
+      ];
+
+      const coordLoad = await geocodeCity(fromStr);
+      const coordUnload = await geocodeCity(toStr);
+      const mainRoute = await getRoadDistanceKm(coordLoad, coordUnload);
+
+      mapLayerGroup.clearLayers();
+
+      if (mainRoute.geometry) {
+        const line = L.geoJSON(mainRoute.geometry, { style: { color: "#FF5526", weight: 4 } }).addTo(mapLayerGroup);
+        map.fitBounds(line.getBounds(), { padding: [40, 40] });
+      }
+      L.circleMarker(coordLoad, { radius: 7, color: "#fff", fillColor: "#FF5526", fillOpacity: 1 }).bindPopup(`<b>▲ Nakládka:</b> ${fromStr}`).addTo(mapLayerGroup);
+      L.circleMarker(coordUnload, { radius: 7, color: "#fff", fillColor: "#10b981", fillOpacity: 1 }).bindPopup(`<b>▼ Vykládka:</b> ${toStr}`).addTo(mapLayerGroup);
+
+      const results = [];
+      for (const v of fleet) {
+        const vCoord = await geocodeCity(v.city);
+        const approach = await getRoadDistanceKm(vCoord, coordLoad);
+
+        const icon = L.divIcon({
+          className: "",
+          html: `<div class="van-marker">🚐 ${v.code} (${v.city})</div>`
+        });
+        L.marker(vCoord, { icon }).addTo(mapLayerGroup);
+
+        const totalKm = approach.km + mainRoute.km;
+        const activeVan = window.APP.getActiveVan();
+        const revenueCzk = Math.round(eur * (window.APP.eurRate - window.APP.bankSpread));
+        const fuelCostCzk = Math.round((totalKm / 100) * (activeVan.consumption || 11.5) * 36.5);
+        const driverCostCzk = Math.round(totalKm * 4.0);
+        const netProfit = revenueCzk - fuelCostCzk - driverCostCzk;
+
+        results.push({
+          ...v,
+          approachKm: approach.km,
+          approachHours: approach.hours,
+          totalKm,
+          netProfit
+        });
+      }
+
+      results.sort((a, b) => b.netProfit - a.netProfit);
+
+      document.getElementById("route-summary").innerHTML = `
+        <div class="flex justify-between"><span>Trasa s nákladem:</span><strong class="text-white">${mainRoute.km} km (${mainRoute.hours.toFixed(1)} h)</strong></div>
+      `;
+
+      document.getElementById("vans-ranking").innerHTML = results.map((r, i) => `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#141518] border ${i === 0 ? 'border-orange-500/70' : 'border-white/10'} rounded-2xl p-4 text-sm">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-base text-white">${i + 1}. ${r.code} (${r.driver})</span>
+              <span class="px-2.5 py-0.5 rounded-full bg-white/10 text-zinc-300 text-xs">${r.city}</span>
+              ${i === 0 ? `<span class="px-2.5 py-0.5 rounded-full trukon-pill-active font-bold text-xs">Nejlepší volba</span>` : ``}
+            </div>
+            <div class="text-zinc-400 mt-1">
+              Prázdný nájezd k nakládce: <strong class="text-orange-300">${r.approachKm} km</strong> • Celkem ${r.totalKm} km
+            </div>
+          </div>
+          <div class="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+            <div class="text-right">
+              <div class="text-lg font-extrabold ${r.netProfit > 0 ? 'text-emerald-400' : 'text-red-400'}">
+                +${r.netProfit.toLocaleString("cs-CZ")} Kč
+              </div>
+              <div class="text-xs text-zinc-400">${(r.netProfit / r.totalKm).toFixed(1)} Kč / km</div>
+              <a href="rentgen.html?eur=${eur}&km=${mainRoute.km}&emptyKm=${r.approachKm}&kg=${document.getElementById('r-kg').value}"
+                 class="inline-block mt-1 text-xs font-semibold text-orange-300 hover:underline">
+                Otevřít v kalkulačce zisku →
+              </a>
+            </div>
+            <a href="rentgen.html?eur=${eur}&km=${mainRoute.km}&emptyKm=${r.approachKm}&kg=${cargoKg}" 
+               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-orange-500/50 hover:bg-orange-500/10 text-xs font-semibold text-zinc-200 hover:text-white transition whitespace-nowrap">
+              <span>Rentgen</span>
+              <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </a>
+          </div>
+        </div>
+      `).join("");
+
+      btn.textContent = "Spočítat trasu a najít auto";
+    }
+
+    runFleetCalculation();
+  </script>
+</body>
+</html>

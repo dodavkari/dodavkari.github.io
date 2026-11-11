@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smím tuhle zakázku jet? — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-20 flex-1 w-full">
+
+    <div class="mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Smím tuhle zakázku jet?</h1>
+      <p class="text-base text-zinc-300 mt-1">
+        Zkontroluj pravidla tachografů 2,5–3,5t (od 7/2026), kabotáž, hlášení vyslání řidiče (IMI) a reálný čas dojezdu.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEVÝ PANEL: Zadání -->
+      <div class="lg:col-span-5 trukon-card rounded-3xl p-6 space-y-5">
+
+        <div>
+          <label class="block text-sm font-medium text-zinc-300 mb-2">1. Celková hmotnost v TP (vč. vleku)</label>
+          <div class="grid grid-cols-2 gap-2.5 text-sm">
+            <button onclick="setGvw('over25')" id="btn-over25" class="py-3 px-3 rounded-xl font-semibold trukon-pill-active transition">
+              2,51 – 3,5 t
+            </button>
+            <button onclick="setGvw('under25')" id="btn-under25" class="py-3 px-3 rounded-xl font-medium bg-[#141518] text-zinc-300 border border-white/10 hover:text-white transition">
+              Do 2,50 t
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-zinc-300 mb-1.5">2. Typ přepravy</label>
+          <select id="w-route" onchange="evaluateRules()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-3 text-sm text-white focus:outline-none">
+            <option value="intl">Z ČR do EU (nebo z EU zpět do ČR)</option>
+            <option value="crosstrade">Mezi 2 cizími státy (např. Německo → Francie)</option>
+            <option value="cabotage">Kabotáž (nakládka i vykládka v 1 cizím státě)</option>
+            <option value="domestic">Jen po ČR (vnitrostátní)</option>
+            <option value="own">Vlastní potřeba (vlastní zboží / nářadí)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-zinc-300 mb-1.5">3. Kterými státy jedeš?</label>
+          <div class="grid grid-cols-2 gap-2.5 text-sm">
+            <label class="flex items-center gap-2.5 bg-[#141518] border border-white/10 rounded-xl px-3.5 py-2.5 cursor-pointer">
+              <input type="checkbox" id="st-de" checked onchange="evaluateRules()" class="w-4 h-4 accent-orange-500 rounded">
+              <span class="text-zinc-200">🇩🇪 Německo</span>
+            </label>
+            <label class="flex items-center gap-2.5 bg-[#141518] border border-white/10 rounded-xl px-3.5 py-2.5 cursor-pointer">
+              <input type="checkbox" id="st-fr" onchange="evaluateRules()" class="w-4 h-4 accent-orange-500 rounded">
+              <span class="text-zinc-200">🇫🇷 Francie</span>
+            </label>
+            <label class="flex items-center gap-2.5 bg-[#141518] border border-white/10 rounded-xl px-3.5 py-2.5 cursor-pointer">
+              <input type="checkbox" id="st-at" onchange="evaluateRules()" class="w-4 h-4 accent-orange-500 rounded">
+              <span class="text-zinc-200">🇦🇹 Rakousko</span>
+            </label>
+            <label class="flex items-center gap-2.5 bg-[#141518] border border-white/10 rounded-xl px-3.5 py-2.5 cursor-pointer">
+              <input type="checkbox" id="st-it" onchange="evaluateRules()" class="w-4 h-4 accent-orange-500 rounded">
+              <span class="text-zinc-200">🇮🇹 Itálie</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Kabotáž detaily -->
+        <div id="cabotage-box" class="hidden bg-[#141518] border border-orange-500/40 rounded-2xl p-4 space-y-3 text-sm">
+          <div class="font-bold text-orange-300">Kontrola kabotáže (max. 3 jízdy za 7 dní)</div>
+          <label class="flex items-center justify-between gap-2">
+            <span class="text-zinc-300">Přijel jsi do státu s nákladem?</span>
+            <input type="checkbox" id="cab-loaded" checked onchange="evaluateRules()" class="w-4 h-4 accent-orange-500">
+          </label>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Kolikátá kabotáž (max 3)</label>
+              <input type="number" id="cab-count" value="1" min="1" max="10" oninput="evaluateRules()" class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white font-bold">
+            </div>
+            <div>
+              <label class="block text-xs text-zinc-400 mb-1">Dní od mezinár. vykládky</label>
+              <input type="number" id="cab-days" value="3" min="0" max="30" oninput="evaluateRules()" class="w-full bg-[#1C1D22] border border-white/15 rounded-xl px-3 py-2 text-white font-bold">
+            </div>
+          </div>
+          <label class="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+            <span class="text-zinc-300">Dělal jsi tu kabotáž v posledních 4 dnech?</span>
+            <input type="checkbox" id="cab-cooling" onchange="evaluateRules()" class="w-4 h-4 accent-orange-500">
+          </label>
+        </div>
+
+        <div class="pt-3 border-t border-white/10 grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm text-zinc-300 mb-1">Délka trasy (km)</label>
+            <input type="number" id="t-km" value="950" oninput="evaluateRules()"
+                   class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base font-bold text-white focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-sm text-zinc-300 mb-1">Průměr (km/h)</label>
+            <input type="number" id="t-speed" value="85" oninput="evaluateRules()"
+                   class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base font-bold text-white focus:outline-none">
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-white/10 space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm text-zinc-300 mb-1">Odjeto tento týden (h)</label>
+              <input type="number" id="w-week1" value="32" min="0" max="70" oninput="evaluateRules()"
+                     class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2 text-base font-bold text-white focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm text-zinc-300 mb-1">Minulý týden (h)</label>
+              <input type="number" id="w-week2" value="44" min="0" max="70" oninput="evaluateRules()"
+                     class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2 text-base font-bold text-white focus:outline-none">
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-sm pt-1">
+            <label class="flex items-center gap-2 cursor-pointer text-zinc-300">
+              <input type="checkbox" id="t-10h" checked onchange="evaluateRules()" class="w-4 h-4 accent-orange-500 rounded">
+              <span>Mám volnou 10h jízdu</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-zinc-300">
+              <input type="checkbox" id="t-crew" onchange="evaluateRules()" class="w-4 h-4 accent-orange-500 rounded">
+              <span>2 řidiči</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- PRAVÝ PANEL: Verdikt -->
+      <div class="lg:col-span-7 space-y-5">
+
+        <div class="trukon-card rounded-3xl p-6 space-y-5">
+
+          <div id="verdict-banner" class="rounded-2xl border p-5"></div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div class="bg-[#141518] border border-white/10 rounded-2xl p-4">
+              <div class="text-sm text-zinc-400">Reálný čas jízdy s pauzami</div>
+              <div id="out-tacho-time" class="text-3xl font-extrabold text-orange-400 mt-1">0 h</div>
+              <div id="out-tacho-breaks" class="text-sm text-zinc-300 mt-1"></div>
+            </div>
+            <div class="bg-[#141518] border border-white/10 rounded-2xl p-4">
+              <div class="text-sm text-zinc-400">Zbývající jízda v týdnu</div>
+              <div id="out-weekly-rem" class="text-3xl font-extrabold text-white mt-1">0 h</div>
+              <div id="out-weekly-sub" class="text-sm text-zinc-300 mt-1">Limit 56 h týdně / 90 h za 2 týdny</div>
+            </div>
+          </div>
+
+          <div id="posting-box" class="bg-[#141518] border border-orange-500/40 rounded-2xl p-4 space-y-2 text-sm"></div>
+
+          <div id="rules-list" class="space-y-2.5"></div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    let gvwMode = "over25";
+
+    function setGvw(m) {
+      gvwMode = m;
+      document.getElementById("btn-over25").className = m === "over25"
+        ? "py-3 px-3 rounded-xl font-semibold trukon-pill-active transition"
+        : "py-3 px-3 rounded-xl font-medium bg-[#141518] text-zinc-300 border border-white/10 hover:text-white transition";
+      document.getElementById("btn-under25").className = m === "under25"
+        ? "py-3 px-3 rounded-xl font-semibold trukon-pill-active transition"
+        : "py-3 px-3 rounded-xl font-medium bg-[#141518] text-zinc-300 border border-white/10 hover:text-white transition";
+      evaluateRules();
+    }
+
+    window.onVanChanged = (van) => {
+      if (van.id === "pod-25t") setGvw("under25");
+      else setGvw("over25");
+    };
+
+    function formatH(hoursFloat) {
+      const h = Math.floor(hoursFloat);
+      const m = Math.round((hoursFloat - h) * 60);
+      return `${h} h ${m} min`;
+    }
+
+    function evaluateRules() {
+      const route = document.getElementById("w-route").value;
+      const km = Number(document.getElementById("t-km").value) || 0;
+      const speed = Number(document.getElementById("t-speed").value) || 85;
+      const week1 = Number(document.getElementById("w-week1").value) || 0;
+      const week2 = Number(document.getElementById("w-week2").value) || 0;
+      const use10h = document.getElementById("t-10h").checked;
+      const isCrew = document.getElementById("t-crew").checked;
+
+      const stDe = document.getElementById("st-de").checked;
+      const stFr = document.getElementById("st-fr").checked;
+      const stAt = document.getElementById("st-at").checked;
+      const stIt = document.getElementById("st-it").checked;
+
+      document.getElementById("cabotage-box").className = route === "cabotage"
+        ? "bg-[#141518] border border-orange-500/40 rounded-2xl p-4 space-y-3 text-sm"
+        : "hidden";
+
+      const pureDriveH = km / speed;
+      const maxDailyDrive = isCrew ? 18 : (use10h ? 10 : 9);
+      const needsTacho = gvwMode === "over25" && (route === "intl" || route === "cabotage" || route === "crosstrade");
+
+      const shortBreaksCount = isCrew ? 0 : Math.floor(Math.max(0, pureDriveH - 0.01) / 4.5);
+      const dailyRestsCount = Math.floor(Math.max(0, pureDriveH - 0.01) / maxDailyDrive);
+      const totalBreakHours = needsTacho ? ((shortBreaksCount * 0.75) + (dailyRestsCount * 9)) : (shortBreaksCount * 0.35);
+      const totalTimeH = pureDriveH + totalBreakHours;
+
+      document.getElementById("out-tacho-time").textContent = formatH(totalTimeH);
+      document.getElementById("out-tacho-breaks").textContent = needsTacho
+        ? `Čistá jízda ${formatH(pureDriveH)} + pauzy ${formatH(totalBreakHours)}`
+        : `Jízda ${formatH(pureDriveH)} (bez tachografu)`;
+
+      const drivePerDriver = isCrew ? (pureDriveH / 2) : pureDriveH;
+      const remWeek = 56 - (week1 + drivePerDriver);
+      const remBiWeek = 90 - (week1 + week2 + drivePerDriver);
+      const effectiveRem = Math.min(remWeek, remBiWeek);
+
+      const remEl = document.getElementById("out-weekly-rem");
+      remEl.textContent = `${effectiveRem.toFixed(1)} h`;
+      remEl.className = `text-3xl font-extrabold mt-1 ${effectiveRem < 0 ? 'text-red-400' : 'text-emerald-400'}`;
+      document.getElementById("out-weekly-sub").textContent = `Týden: ${(week1 + drivePerDriver).toFixed(1)}/56 h • 2 týdny: ${(week1 + week2 + drivePerDriver).toFixed(1)}/90 h`;
+
+      const pBox = document.getElementById("posting-box");
+      const countryNotes = [];
+      if (stDe) countryNotes.push(`🇩🇪 <strong>Německo:</strong> U aut 2,8–3,5 t bez tachografu je povinný ruční záznam jízdy (Tageskontrollblatt).`);
+      if (stFr) countryNotes.push(`🇫🇷 <strong>Francie:</strong> Zákaz týdenního odpočinku v lehací nástavbě dodávky.`);
+      if (stAt) countryNotes.push(`🇦🇹 <strong>Rakousko:</strong> Při kontrole vyžadují formulář A1 a pracovní smlouvu.`);
+      if (stIt) countryNotes.push(`🇮🇹 <strong>Itálie:</strong> Při nakládce/vykládce mezi cizími státy kontrolují registraci IMI.`);
+
+      if (route === "crosstrade" || route === "cabotage") {
+        pBox.className = "bg-[#141518] border border-orange-500/50 rounded-2xl p-4 space-y-2 text-sm text-zinc-200";
+        pBox.innerHTML = `
+          <div class="flex items-center justify-between font-bold text-orange-300">
+            <span>📋 Povinné hlášení vyslání řidiče (systém IMI)</span>
+            <a href="https://www.postingdeclaration.eu/" target="_blank" rel="noopener" class="underline text-white">Portál IMI ↗</a>
+          </div>
+          <p>Při kabotáži a přepravě mezi 2 cizími státy musí mít řidič v autě QR potvrzení z portálu IMI a formulář A1.</p>
+          ${countryNotes.length ? `<div class="pt-2 border-t border-white/10 space-y-1 text-zinc-300">${countryNotes.join("<br>")}</div>` : ""}
+        `;
+      } else if (route === "intl") {
+        pBox.className = "bg-[#141518] border border-white/10 rounded-2xl p-4 space-y-1.5 text-sm text-zinc-300";
+        pBox.innerHTML = `
+          <div class="font-bold text-emerald-400">✓ Přímá jízda ČR ↔ EU: Bez hlášení v IMI</div>
+          <p>Na přímý vývoz z ČR a dovoz zpět do ČR se hlášení v IMI nevztahuje (stačí formulář A1).</p>
+          ${countryNotes.length ? `<div class="pt-2 border-t border-white/10 space-y-1">${countryNotes.join("<br>")}</div>` : ""}
+        `;
+      } else {
+        pBox.className = "hidden";
+      }
+
+      const items = [];
+      let status = "ok";
+
+      if (!needsTacho) {
+        items.push({ t: "ok", head: "Jízda bez tachografu", body: "Pro auta do 2,5 t, čisté vnitro po ČR nebo vlastní potřebu není tachograf povinný." });
+      } else {
+        items.push({ t: "info", head: "Povinný chytrý tachograf + Eurolicence", body: "Od 1. 7. 2026 platí pro dodávky 2,5–3,5 t v mezinárodní dopravě stejné pauzy jako u kamionů." });
+      }
+
+      if (needsTacho && dailyRestsCount > 0) {
+        if (status === "ok") status = "amber";
+        items.push({
+          t: "warn",
+          head: `Nutná ${dailyRestsCount}× 9h pauza na spánek po cestě`,
+          body: `Trasa vyžaduje ${formatH(pureDriveH)} čisté jízdy (denní limit je ${maxDailyDrive} h).`
+        });
+      }
+
+      if (needsTacho && effectiveRem < 0) {
+        status = "red";
+        items.push({
+          t: "crit",
+          head: `Překročíš týdenní limit jízdy o ${Math.abs(effectiveRem).toFixed(1)} h!`,
+          body: `Maximální povolená jízda je 56 h za týden a 90 h za 2 týdny.`
+        });
+      }
+
+      if (route === "cabotage") {
+        const loaded = document.getElementById("cab-loaded").checked;
+        const count = Number(document.getElementById("cab-count").value) || 1;
+        const days = Number(document.getElementById("cab-days").value) || 0;
+        const cooling = document.getElementById("cab-cooling").checked;
+
+        if (!loaded || count > 3 || days > 7 || cooling) {
+          status = "red";
+          items.push({ t: "crit", head: "Porušení pravidel kabotáže!", body: "Povoleno max. 3 jízdy do 7 dnů po vykládce mezinárodního nákladu (pak 4 dny pauza mimo stát)." });
+        } else {
+          items.push({ t: "ok", head: `Kabotáž je v pořádku (${count}. z 3 povolených)`, body: "Měj u sebe CMR z příjezdové mezinárodní jízdy." });
+        }
+      }
+
+      const banner = document.getElementById("verdict-banner");
+      const tones = {
+        ok: "bg-emerald-950/50 border-emerald-500/70 text-emerald-100",
+        amber: "bg-amber-950/50 border-amber-500/70 text-amber-100",
+        red: "bg-red-950/50 border-red-600/70 text-red-100"
+      };
+      const titles = {
+        ok: ["MŮŽEŠ JET — V POŘÁDKU", "Zakázka splňuje limity jízdy i pravidla pro dodávky."],
+        amber: ["JEĎ S PAUZOU NA SPÁNEK", "Zakázka je legální, ale po cestě musíš udělat 9h odpočinek."],
+        red: ["STOP — HROZÍ VYSOKÁ POKUTA", "Tahle jízda překračuje povolené hodiny nebo pravidla kabotáže."]
+      };
+      banner.className = `rounded-2xl border p-5 ${tones[status]}`;
+      banner.innerHTML = `
+        <div class="text-xl font-bold text-white">${titles[status][0]}</div>
+        <div class="text-sm mt-1 opacity-90">${titles[status][1]}</div>
+      `;
+
+      const iconMap = { crit: "🛑", warn: "⚠️", ok: "✓", info: "ℹ️" };
+      document.getElementById("rules-list").innerHTML = items.map(it => `
+        <div class="bg-[#141518] border border-white/10 rounded-2xl px-4 py-3.5 flex items-start gap-3">
+          <span class="font-bold">${iconMap[it.t]}</span>
+          <div>
+            <div class="text-sm font-bold text-white">${it.head}</div>
+            <div class="text-sm text-zinc-300 mt-0.5">${it.body}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    const passedKm = Number(new URLSearchParams(location.search).get("km"));
+    if (passedKm > 0) document.getElementById("t-km").value = passedKm;
+
+    evaluateRules();
+  </script>
+</body>
+</html>

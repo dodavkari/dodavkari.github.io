@@ -1,0 +1,18 @@
+# Antigravity & Privátní soubory (Nikdy nenahrávat na GitHub / GitHub Pages)
+_private_interni/
+*.rtf
+Changes.md
+SKILL.md
+admin-generator.html
+generate-leads.js
+design.jpg
+images.jfif
+
+# Proměnné prostředí a klíče
+.env
+*.local
+*.log
+
+# Operační systém
+.DS_Store
+Thumbs.db

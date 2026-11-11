@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Srovnávač tankovacích karet — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-24 flex-1 w-full">
+
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Srovnávač tankovacích karet (ČR vs. EU)</h1>
+        <p class="text-base text-zinc-300 mt-1">
+          Porovnej dotankování před hranicemi, sjezd z dálnice k Autohofu a dálniční stojan v EU.
+        </p>
+      </div>
+      <a href="vyplaty.html" class="self-start text-sm font-semibold text-orange-300 bg-orange-500/15 border border-orange-500/30 px-4 py-2 rounded-xl transition shrink-0">
+        👷 Srovnání výplat řidičů →
+      </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <div class="lg:col-span-5 trukon-card rounded-3xl p-6 space-y-4">
+        <div>
+          <label class="block text-sm text-zinc-300 mb-1">1. Země tankování</label>
+          <select id="f-country" onchange="onCountryChange()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-4 py-3 text-sm text-white font-semibold">
+            <option value="DE" data-pump="2.04" data-vat="1.19">🇩🇪 Německo dálnice (DPH 19 %)</option>
+            <option value="AT" data-pump="1.96" data-vat="1.20">🇦🇹 Rakousko dálnice (DPH 20 %)</option>
+            <option value="FR" data-pump="2.09" data-vat="1.20">🇫🇷 Francie dálnice (DPH 20 %)</option>
+            <option value="PL" data-pump="1.62" data-vat="1.23">🇵🇱 Polsko (DPH 23 %)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-zinc-400 mb-1">Dálnice v EU (€/l s DPH)</label>
+            <input type="number" step="0.01" id="f-pump" value="2.04" oninput="calcFuel()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base font-bold text-white">
+          </div>
+          <div>
+            <label class="block text-xs text-zinc-400 mb-1">ČR před čárou (Kč/l s DPH)</label>
+            <input type="number" step="0.1" id="f-cz-pump" value="34.90" oninput="calcFuel()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base font-bold text-emerald-400">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2 border-t border-white/10">
+          <div>
+            <label class="block text-xs text-zinc-400 mb-1">Nádrž (litrů)</label>
+            <input type="number" id="f-liters" value="95" oninput="calcFuel()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base font-bold text-white">
+          </div>
+          <div>
+            <label class="block text-xs text-zinc-400 mb-1">Tankování měsíčně</label>
+            <input type="number" id="f-count" value="16" oninput="calcFuel()" class="w-full bg-[#141518] border border-white/15 rounded-xl px-3.5 py-2.5 text-base font-bold text-white">
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7 space-y-4">
+        <div class="trukon-card rounded-3xl p-6 space-y-3.5">
+          
+          <div class="flex items-center justify-between bg-emerald-950/40 border border-emerald-600/60 rounded-2xl p-4">
+            <div>
+              <div class="text-base font-bold text-emerald-300">1. Dotankování před čárou (Rozvadov / ONO / Eurowag)</div>
+              <div id="f-cz-unit" class="text-xs text-zinc-300 mt-0.5">28,84 Kč / l bez DPH</div>
+            </div>
+            <div class="text-right shrink-0 ml-3">
+              <div id="f-cz" class="text-2xl font-extrabold text-emerald-400">0 Kč</div>
+              <div class="text-xs text-emerald-300">za 1 nádrž</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between bg-[#141518] border border-white/10 rounded-2xl p-4">
+            <div>
+              <div class="text-base font-bold text-white">2. Sjezd k Autohofu mimo dálnici (UTA / Eurowag)</div>
+              <div id="f-autohof-unit" class="text-xs text-zinc-400 mt-0.5">cca 33,20 Kč / l bez DPH</div>
+            </div>
+            <div class="text-right shrink-0 ml-3">
+              <div id="f-autohof" class="text-2xl font-extrabold text-white">0 Kč</div>
+              <div id="f-autohof-diff" class="text-xs text-orange-300"></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between bg-red-950/40 border border-red-700/60 rounded-2xl p-4">
+            <div>
+              <div class="text-base font-bold text-red-200">3. Dálniční stojan v EU (Totem + poplatek za vratku DPH)</div>
+              <div id="f-hwy-unit" class="text-xs text-zinc-300 mt-0.5">cca 43,90 Kč / l bez DPH</div>
+            </div>
+            <div class="text-right shrink-0 ml-3">
+              <div id="f-hwy" class="text-2xl font-extrabold text-red-400">0 Kč</div>
+              <div id="f-hwy-diff" class="text-xs text-red-300"></div>
+            </div>
+          </div>
+
+          <div id="f-diff" class="pt-2 text-sm text-orange-300 font-semibold text-center"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+
+    function onCountryChange() {
+      const sel = document.getElementById("f-country");
+      const opt = sel.options[sel.selectedIndex];
+      document.getElementById("f-pump").value = opt.dataset.pump;
+      calcFuel();
+    }
+
+    function calcFuel() {
+      const sel = document.getElementById("f-country");
+      const opt = sel.options[sel.selectedIndex];
+      const vatDiv = Number(opt.dataset.vat) || 1.19;
+      const pumpEurGross = Number(document.getElementById("f-pump").value) || 2.04;
+      const czPumpGross = Number(document.getElementById("f-cz-pump").value) || 34.9;
+      const l = Number(document.getElementById("f-liters").value) || 95;
+      const count = Number(document.getElementById("f-count").value) || 16;
+      const eurRate = window.APP?.eurRate || 25.25;
+
+      const czNetUnit = czPumpGross / 1.21;
+      const autohofNetUnit = ((Math.max(1.2, pumpEurGross - 0.22)) / vatDiv) * eurRate;
+      const hwyNetUnit = ((pumpEurGross / vatDiv) * 1.025) * eurRate;
+
+      const czTank = Math.round(l * czNetUnit);
+      const autohofTank = Math.round(l * autohofNetUnit);
+      const hwyTank = Math.round(l * hwyNetUnit);
+      const monthlyLoss = (hwyTank - czTank) * count;
+
+      document.getElementById("f-cz-unit").textContent = `${czNetUnit.toFixed(2)} Kč / l bez DPH`;
+      document.getElementById("f-autohof-unit").textContent = `${autohofNetUnit.toFixed(2)} Kč / l bez DPH`;
+      document.getElementById("f-hwy-unit").textContent = `${hwyNetUnit.toFixed(2)} Kč / l bez DPH`;
+
+      document.getElementById("f-cz").textContent = `${czTank.toLocaleString("cs-CZ")} Kč`;
+      document.getElementById("f-autohof").textContent = `${autohofTank.toLocaleString("cs-CZ")} Kč`;
+      document.getElementById("f-autohof-diff").textContent = `+${(autohofTank - czTank).toLocaleString("cs-CZ")} Kč oproti ČR`;
+      document.getElementById("f-hwy").textContent = `${hwyTank.toLocaleString("cs-CZ")} Kč`;
+      document.getElementById("f-hwy-diff").textContent = `+${(hwyTank - czTank).toLocaleString("cs-CZ")} Kč oproti ČR`;
+
+      document.getElementById("f-diff").textContent =
+        `Rozdíl na 1 plné nádrži (${l} l) je ${(hwyTank - czTank).toLocaleString("cs-CZ")} Kč • Za měsíc na ${count} tankováních ušetříš ${monthlyLoss.toLocaleString("cs-CZ")} Kč.`;
+    }
+
+    calcFuel();
+  </script>
+</body>
+</html>

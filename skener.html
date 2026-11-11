@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Noční skener CMR — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-24 flex-1 w-full">
+
+    <div class="mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Noční skener CMR</h1>
+      <p class="text-base text-zinc-300 mt-1">
+        Vyfoť potvrzený dodací list nebo CMR v kabině. Odstraní šedé stíny a jedním klikem ho pošle na dispečink.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <div class="lg:col-span-5 trukon-card rounded-3xl p-6 space-y-5">
+        <label class="block w-full cursor-pointer trukon-btn text-base py-3.5 px-4 rounded-xl text-center transition">
+          📷 1. Vyfotit nebo nahrát CMR
+          <input type="file" accept="image/*" capture="environment" onchange="handleImage(event)" class="hidden">
+        </label>
+
+        <button onclick="loadDemoCmr()" class="w-full bg-[#141518] hover:bg-zinc-800 border border-white/15 text-zinc-200 text-sm font-medium py-3 rounded-xl transition">
+          Vyzkoušet na vzorovém tmavém CMR
+        </button>
+
+        <div class="pt-3 border-t border-white/10 space-y-2.5">
+          <div class="flex justify-between text-sm text-zinc-300">
+            <span>Síla vybělení papíru</span>
+            <span id="lbl-thresh" class="text-white font-bold">165</span>
+          </div>
+          <input type="range" id="rng-thresh" min="110" max="220" value="165" oninput="processCanvas()" class="w-full accent-orange-500">
+        </div>
+
+        <div class="pt-3 border-t border-white/10 space-y-2.5">
+          <button onclick="shareToBoss()" id="btn-share-boss" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-base py-3.5 rounded-xl transition">
+            📲 2. Poslat CMR šéfovi / na WhatsApp
+          </button>
+          <button onclick="downloadScan()" class="w-full bg-[#141518] hover:bg-zinc-800 border border-white/15 text-white font-semibold text-sm py-3 rounded-xl transition">
+            ⬇ Stáhnout vyčištěný dokument (PNG)
+          </button>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7">
+        <div class="trukon-card-subtle rounded-3xl p-6 flex flex-col items-center justify-center min-h-[360px]">
+          <canvas id="cmr-canvas" class="max-w-full rounded-xl border border-white/15 shadow-lg"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+    const canvas = document.getElementById("cmr-canvas");
+    const ctx = canvas.getContext("2d");
+    let sourceImg = null;
+
+    function handleImage(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => { sourceImg = img; processCanvas(); };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function loadDemoCmr() {
+      const temp = document.createElement("canvas");
+      temp.width = 520; temp.height = 680;
+      const tctx = temp.getContext("2d");
+
+      const grad = tctx.createLinearGradient(0, 0, 520, 680);
+      grad.addColorStop(0, "#b8b8be");
+      grad.addColorStop(0.55, "#787882");
+      grad.addColorStop(1, "#4a4a52");
+      tctx.fillStyle = grad;
+      tctx.fillRect(0, 0, 520, 680);
+
+      tctx.strokeStyle = "#222"; tctx.lineWidth = 2;
+      tctx.strokeRect(30, 30, 460, 620);
+      tctx.fillStyle = "#1c1c1e"; tctx.font = "bold 22px Inter, sans-serif";
+      tctx.fillText("MEZINÁRODNÍ NÁKLADNÍ LIST CMR", 50, 75);
+      tctx.font = "15px Inter, sans-serif";
+      tctx.fillText("1. Odesílatel: Škoda Auto / Plzeň CZ", 50, 130);
+      tctx.fillText("2. Příjemce: Automotive GmbH, Mannheim DE", 50, 175);
+      tctx.fillText("6. Náklad: 8 EUR palet - KTL díly (840 kg)", 50, 230);
+      tctx.fillText("24. Zboží přijato (Datum / Razítko / Podpis):", 50, 460);
+
+      tctx.strokeStyle = "#1e293b"; tctx.lineWidth = 3;
+      tctx.strokeRect(240, 490, 210, 95);
+      tctx.font = "bold 16px Inter, sans-serif";
+      tctx.fillText("MANNHEIM LOGISTIK", 260, 530);
+      tctx.fillText("PREVZATO BEZ VYHRAD", 255, 560);
+
+      const img = new Image();
+      img.onload = () => { sourceImg = img; processCanvas(); };
+      img.src = temp.toDataURL();
+    }
+
+    function processCanvas() {
+      if (!sourceImg) return;
+      const thresh = Number(document.getElementById("rng-thresh").value);
+      document.getElementById("lbl-thresh").textContent = thresh;
+
+      canvas.width = sourceImg.width;
+      canvas.height = sourceImg.height;
+      ctx.drawImage(sourceImg, 0, 0);
+
+      const bgCanvas = document.createElement("canvas");
+      bgCanvas.width = Math.max(16, Math.round(canvas.width / 12));
+      bgCanvas.height = Math.max(16, Math.round(canvas.height / 12));
+      const bgCtx = bgCanvas.getContext("2d");
+      bgCtx.filter = "blur(6px)";
+      bgCtx.drawImage(sourceImg, 0, 0, bgCanvas.width, bgCanvas.height);
+
+      const fullBg = document.createElement("canvas");
+      fullBg.width = canvas.width;
+      fullBg.height = canvas.height;
+      const fbCtx = fullBg.getContext("2d");
+      fbCtx.drawImage(bgCanvas, 0, 0, canvas.width, canvas.height);
+
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const bgData = fbCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const d = imgData.data;
+
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+        const bgGray = Math.max(40, 0.299 * bgData[i] + 0.587 * bgData[i+1] + 0.114 * bgData[i+2]);
+        const norm = (gray / bgGray) * 235;
+        const clean = norm > thresh ? 255 : Math.max(0, (norm - 60) * 0.45);
+        d[i] = d[i+1] = d[i+2] = clean;
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    function downloadScan() {
+      const a = document.createElement("a");
+      a.download = "CMR-vycisteno.png";
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    }
+
+    async function shareToBoss() {
+      const btn = document.getElementById("btn-share-boss");
+      try {
+        const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+        const file = new File([blob], "CMR-potvrzeno.png", { type: "image/png" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: "Potvrzené CMR z vykládky",
+            text: "Posílám vyčištěné CMR z vykládky (" + window.APP.getActiveVan().name + ").",
+            files: [file]
+          });
+          return;
+        }
+      } catch (e) {}
+      downloadScan();
+      const msg = encodeURIComponent("Ahoj, posílám vyčištěné CMR z vykládky (" + window.APP.getActiveVan().name + ").");
+      window.open(`https://wa.me/?text=${msg}`, "_blank");
+      btn.textContent = "✓ Staženo a otevřen WhatsApp";
+      setTimeout(() => (btn.textContent = "📲 2. Poslat CMR šéfovi / na WhatsApp"), 2500);
+    }
+
+    loadDemoCmr();
+  </script>
+</body>
+</html>

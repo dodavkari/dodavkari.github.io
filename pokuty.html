@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokuty za přeložení — Nástroje pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0a0a0c;
+      color: #f4f4f6;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+  <script>location.replace("tetris.html");</script>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <main class="max-w-5xl mx-auto px-5 pt-10 pb-24 flex-1 w-full">
+
+    <div class="mb-8">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Pokuty za přeložení (Německo &amp; Rakousko)</h1>
+      <p id="van-info" class="text-sm text-zinc-400 mt-1"></p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <div class="lg:col-span-6 bg-[#141417] border border-zinc-800/80 rounded-2xl p-6 space-y-6">
+        <div>
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-zinc-400">Kolik máš reálně naloženo (kg):</span>
+            <span id="lbl-cargo" class="font-bold text-white text-lg">1 250 kg</span>
+          </div>
+          <input type="range" id="rng-cargo" min="300" max="2500" step="25" value="1250" oninput="calcFine()"
+                 class="w-full accent-white cursor-pointer">
+        </div>
+
+        <div class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-between text-sm">
+          <span class="text-zinc-400">Celková váha na policejní váze:</span>
+          <span id="out-scale-kg" class="font-bold text-white text-base">3 840 kg / 3 500 kg</span>
+        </div>
+      </div>
+
+      <div class="lg:col-span-6 space-y-4">
+        <div class="bg-[#141417] border border-zinc-800/80 rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-zinc-400">Překročení celkové hmotnosti</span>
+            <span id="out-pct" class="text-xl font-bold text-amber-400">+9.7 %</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 pt-2">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div class="text-xs text-zinc-400">Německo (BALM / BAG)</div>
+              <div id="out-de" class="text-lg font-bold text-white mt-1">0 €</div>
+              <div id="out-de-note" class="text-xs text-zinc-400 mt-1"></div>
+            </div>
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div class="text-xs text-zinc-400">Rakousko</div>
+              <div id="out-at" class="text-lg font-bold text-white mt-1">0 €</div>
+              <div id="out-at-note" class="text-xs text-zinc-400 mt-1"></div>
+            </div>
+          </div>
+
+          <div id="out-ban" class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-xs sm:text-sm text-zinc-300"></div>
+        </div>
+
+        <div class="bg-[#141417]/60 border border-zinc-800/60 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
+              <span>🔒</span> <span>Automatický hlídač váhy pro dispečery</span>
+            </div>
+            <p class="text-xs text-zinc-300 leading-relaxed">
+              Chtěl bys, aby systém dispečerovi rovnou zablokoval přiřazení zakázky, která přetíží konkrétní SPZ?
+            </p>
+          </div>
+          <button onclick="window.APP.openWantModal('Automatické hlídání přeložení aut v dispečinku')"
+                  class="shrink-0 px-5 py-3 rounded-2xl text-sm font-semibold trukon-btn transition">
+            Napište mi na WhatsApp
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    window.APP.mountHeader(false);
+    window.onVanChanged = calcFine;
+
+    function calcFine() {
+      const van = window.APP.getActiveVan();
+      const gvw = van.id === "pod-25t" ? 2490 : 3500;
+      const emptyReady = gvw - van.payloadKg;
+      const cargo = Number(document.getElementById("rng-cargo").value);
+
+      document.getElementById("van-info").textContent = `Auto: ${van.name} • Prázdné s řidičem a naftou váží ${emptyReady} kg (Legální náklad max ${van.payloadKg} kg)`;
+      document.getElementById("lbl-cargo").textContent = `${cargo} kg`;
+
+      const totalKg = emptyReady + cargo;
+      const overKg = Math.max(0, totalKg - gvw);
+      const overPct = (overKg / gvw) * 100;
+
+      document.getElementById("out-scale-kg").textContent = `${totalKg} kg / ${gvw} kg`;
+      document.getElementById("out-pct").textContent = overKg > 0 ? `+${overPct.toFixed(1)} % (+${overKg} kg)` : `V normě (0 %)`;
+
+      let deDriver = 0, deCompany = 0, atFine = 0, banText = "✓ Váha je v pořádku nebo v 5% toleranci.";
+
+      if (overPct > 5 && overPct <= 10) {
+        deDriver = 30; deCompany = 35; atFine = 170;
+        banText = "⚠️ V Německu pokuta bez bodů, v Rakousku už hrozí zákaz jízdy do přeložení.";
+      } else if (overPct > 10 && overPct <= 15) {
+        deDriver = 95; deCompany = 140; atFine = 350;
+        banText = "🚨 Zákaz další jízdy! Musíš poslat druhou dodávku a přeložit přebytečná kila na parkovišti.";
+      } else if (overPct > 15 && overPct <= 20) {
+        deDriver = 140; deCompany = 285; atFine = 600;
+        banText = "🚨 Zákaz další jízdy + 1 bod ve Flensburgu pro řidiče i majitele firmy!";
+      } else if (overPct > 20) {
+        deDriver = 235; deCompany = 425; atFine = 1200;
+        banText = "🛑 Kritické přeložení (>20 %): Okamžité odstavení vozidla, bod ve Flensburgu a vysoká pokuta pro firmu.";
+      }
+
+      document.getElementById("out-de").textContent = deDriver > 0 ? `Řidič ${deDriver} € + Firma ${deCompany} €` : `0 €`;
+      document.getElementById("out-de-note").textContent = deDriver > 0 ? `Celkem ${deDriver + deCompany} €` : `Do 5 % tolerance`;
+      document.getElementById("out-at").textContent = atFine > 0 ? `cca ${atFine} €` : `0 €`;
+      document.getElementById("out-at-note").textContent = atFine > 0 ? `Tolerance v AT je jen ~2 %` : `V limitu`;
+      document.getElementById("out-ban").textContent = banText;
+    }
+
+    calcFine();
+  </script>
+</body>
+</html>
