@@ -2,14 +2,14 @@
 
 // === KONFIGURACE POPTÁVEK A ODESÍLÁNÍ (ZDARMA PRO GITHUB PAGES) ===
 // 1. WhatsApp číslo majitele webu (bez mezer, bez +):
-window.WHATSAPP_PHONE = "420777000000";
+window.WHATSAPP_PHONE = "420720105302";
 
 // 2. NEJRYCHLEJŠÍ ZPŮSOB (ZDARMA, 10 SEKUND): Zadej svůj e-mail a poptávky ti budou chodit přímo do e-mailu přes FormSubmit.co:
 // Stačí vložit např. "tvuj-email@seznam.cz" nebo "tvuj-email@gmail.com":
 window.LEADS_EMAIL = "";
 
 // 3. ALTERNATIVA PRO GOOGLE TABULKY: Pokud chceš data automaticky sypat do řádků v Google Sheets, vlož Web App URL z Google Apps Script:
-window.LEADS_WEBHOOK = "";
+window.LEADS_WEBHOOK = "https://script.google.com/macros/s/AKfycbw0b0BcrhxWqTe5uyXLCKMX-uY1BpUW973JHsUr9pxwSLNazL8HGeNGW3WlTH0BMqPctA/exec";
 
 // === GLOBÁLNÍ NASTAVENÍ POZADÍ A ROZMAZÁNÍ (Můžeš měnit zde v kódu nebo na stránce nastaveni.html) ===
 window.BG_DEFAULT_CONFIG = {
