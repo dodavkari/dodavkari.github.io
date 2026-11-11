@@ -2,7 +2,7 @@
 
 // === KONFIGURACE POPTÁVEK A ODESÍLÁNÍ (ZDARMA PRO GITHUB PAGES) ===
 // 1. Google Tabulka: Vlož svou Web App URL z Google Apps Script, kam se automaticky ukládají poptávky:
-window.LEADS_WEBHOOK = "https://script.google.com/macros/s/AKfycbw0b0BcrhxWqTe5uyXLCKMX-uY1BpUW973JHsUr9pxwSLNazL8HGeNGW3WlTH0BMqPctA/exec";
+window.LEADS_WEBHOOK = "https://script.google.com/macros/s/AKfycbz-9TTztgar1RWDgeLl0cpxOmKgU_V4ae8gYfHcfNCoFIcTThArc_QCArFI0IAEO2bSPA/exec";
 
 // 2. Volitelné: E-mail přes FormSubmit.co (pokud chceš notifikace o poptávkách i do e-mailu):
 window.LEADS_EMAIL = "";
