@@ -441,13 +441,15 @@ window.APP = {
       this.eurRate = cached.rate;
       this.eurRateDate = `${cached.cnbDate || today} (ČNB)`;
     } else {
-      fetch("https://api.frankfurter.app/latest?from=EUR&to=CZK")
+      fetch("https://open.er-api.com/v6/latest/EUR")
         .then(r => r.json())
         .then(d => {
-          if (d?.rates?.CZK) {
-            this.eurRate = Math.round(d.rates.CZK * 100) / 100;
-            this.eurRateDate = `${d.date} (ČNB)`;
-            localStorage.setItem("dodavkari_cnb_rate", JSON.stringify({ date: today, rate: this.eurRate, cnbDate: d.date }));
+          const rate = d?.rates?.CZK;
+          if (rate && rate > 20 && rate < 32) {
+            this.eurRate = Math.round(rate * 100) / 100;
+            const dStr = d.time_last_update_utc ? d.time_last_update_utc.slice(5, 16) : today;
+            this.eurRateDate = `${dStr} (ČNB/ECB)`;
+            localStorage.setItem("dodavkari_cnb_rate", JSON.stringify({ date: today, rate: this.eurRate, cnbDate: this.eurRateDate }));
             const b = document.getElementById("hdr-eur-badge");
             if (b) b.textContent = `1 € = ${this.eurRate.toFixed(2).replace(".", ",")} Kč`;
             if (typeof window.onRateLoaded === "function") window.onRateLoaded(this.eurRate);
@@ -627,7 +629,7 @@ window.APP = {
         fetch(window.LEADS_WEBHOOK, {
           method: "POST",
           mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({
             date: new Date().toLocaleString("cs-CZ"),
             topic: this.currentFeatureTopic,
