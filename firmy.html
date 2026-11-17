@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Seženu vám zakázky — Přímé výrobní firmy pro dodávkáře</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      background-color: #F8F9FB !important;
+      color: #111827 !important;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Světlé průhledné pozadí přes celou stránku */
+    #light-bg-layer {
+      position: fixed;
+      inset: -24px;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.88) 100%),
+        url('https://www.flashbyredspher.com/wp-content/uploads/2026/06/4.jpg');
+      background-size: cover;
+      background-position: center;
+      filter: blur(6px);
+      transform: scale(1.04);
+    }
+
+    :root {
+      --acc-light: #06C67E;
+      --acc-dark: #027A4C;
+      --acc-rgb: 3, 145, 90;
+    }
+
+    /* Čisté bílé poloprůhledné karty s jemným akcentem */
+    .light-card {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(var(--acc-rgb), 0.20);
+      box-shadow: 0 20px 45px -15px rgba(17, 24, 39, 0.08), 0 4px 12px rgba(17, 24, 39, 0.03);
+    }
+
+    .light-card-subtle {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid #E5E7EB;
+      box-shadow: 0 8px 24px -6px rgba(17, 24, 39, 0.05);
+    }
+
+    /* Dynamické prodejní barvy (přepínatelné v dev liště) */
+    .accent-btn {
+      background: linear-gradient(135deg, var(--acc-light) 0%, var(--acc-dark) 100%) !important;
+      color: #FFFFFF !important;
+      font-weight: 700;
+      box-shadow: 0 8px 22px rgba(var(--acc-rgb), 0.28);
+    }
+    .accent-btn:hover {
+      filter: brightness(1.06);
+    }
+
+    .accent-pill-active {
+      background: linear-gradient(135deg, var(--acc-light) 0%, var(--acc-dark) 100%) !important;
+      color: #FFFFFF !important;
+      border-color: var(--acc-dark) !important;
+      box-shadow: 0 4px 14px rgba(var(--acc-rgb), 0.25);
+    }
+
+    .accent-progress-bar {
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.22),
+        rgba(255, 255, 255, 0.22) 6px,
+        transparent 6px,
+        transparent 12px
+      ), linear-gradient(90deg, var(--acc-light) 0%, var(--acc-dark) 100%) !important;
+    }
+
+    .text-\[\#D93814\] {
+      color: var(--acc-dark) !important;
+    }
+    .bg-\[\#E03510\] {
+      background-color: var(--acc-dark) !important;
+    }
+    .bg-orange-500\/10, .bg-orange-500\/15, .bg-orange-50\/80, .bg-orange-50\/90 {
+      background-color: rgba(var(--acc-rgb), 0.09) !important;
+    }
+    .border-orange-500\/20, .border-orange-500\/25, .border-orange-500\/30, .border-orange-300 {
+      border-color: rgba(var(--acc-rgb), 0.30) !important;
+    }
+
+    /* Rozmazání nalezených firem po dotazníku + stupňované rozmazání směrem dolů */
+    .blurred-secret {
+      filter: blur(6px);
+      user-select: none;
+      pointer-events: none;
+    }
+    .matched-list-fade {
+      position: relative;
+      max-height: 360px;
+      overflow: hidden;
+    }
+    .matched-list-fade::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 150px;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      mask-image: linear-gradient(to bottom, transparent 0%, black 75%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 75%);
+      background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.86) 65%, rgba(255,255,255,0.98) 100%);
+    }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .step-animate {
+      animation: fadeSlideIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes radarPulse {
+      0% { transform: scale(0.92); opacity: 0.65; }
+      50% { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(0.92); opacity: 0.65; }
+    }
+    .radar-ring {
+      animation: radarPulse 1.6s ease-in-out infinite;
+    }
+
+    @media (max-width: 640px) {
+      input, select, textarea { font-size: 16px !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Průhledné světlé pozadí -->
+  <div id="light-bg-layer"></div>
+
+  <!-- MINIMÁLNÍ HLAVIČKA: Pouze neklikací logo (žádný navigační bar) -->
+  <header class="w-full py-4 px-4 sm:px-6">
+    <div class="max-w-5xl mx-auto flex items-center justify-center sm:justify-start">
+      <div class="inline-flex items-center gap-2.5 font-extrabold text-gray-900 tracking-tight text-base sm:text-lg select-none">
+        <span class="w-9 h-9 rounded-xl accent-btn flex items-center justify-center text-white shadow-md">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <path d="M3 16V8a2 2 0 012-2h9l4 4v6h-2m-13 0h2m11 0a2 2 0 11-4 0m4 0a2 2 0 10-4 0M5 16a2 2 0 104 0m-4 0a2 2 0 114 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span>Nástroje pro dodávkáře</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-4 pb-24 flex-1 w-full">
+
+    <!-- =================================================================== -->
+    <!-- FÁZE 1: KROKOVÝ VĚTVENÝ DOTAZNÍK ("SEŽENU VÁM ZAKÁZKY")             -->
+    <!-- =================================================================== -->
+    <section id="wizard-section" class="max-w-2xl mx-auto">
+
+      <!-- Hlavní nadpis nad dotazníkem -->
+      <div class="text-center space-y-2.5 mb-5 sm:mb-7">
+        <span class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#D93814] bg-orange-500/10 border border-orange-500/25 px-4 py-1.5 rounded-full">
+          Chtěli byste jezdit za víc a jezdit jen to, co se opravdu vyplatí?
+        </span>
+        <h1 class="text-3xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
+          Seženu vám zakázky
+        </h1>
+        <p class="text-sm sm:text-base text-gray-600 max-w-xl mx-auto leading-relaxed">
+          Spojím vás napřímo s výrobními závody a sklady, které právě teď potřebují spolehlivé dodávky do 3,5 t.
+        </p>
+      </div>
+
+      <!-- Karta aktivní otázky -->
+      <div id="question-card" class="light-card rounded-3xl p-5 sm:p-8 space-y-5">
+
+        <!-- 1. UKAZATEL POSTUPU (% COMPLETION BAR) ÚPLNĚ NAHOŘE -->
+        <div class="space-y-1.5 pb-4 border-b border-gray-200/80">
+          <div class="flex items-center justify-between text-xs">
+            <span id="progress-label" class="text-gray-500 font-semibold">Postup vyhodnocení</span>
+            <strong id="progress-pct" class="text-[#D93814] font-extrabold text-sm">12 %</strong>
+          </div>
+          <div class="w-full h-3 bg-gray-100 border border-gray-200 rounded-full overflow-hidden p-0.5">
+            <div id="progress-bar-fill" class="h-full rounded-full accent-progress-bar transition-all duration-500 ease-out" style="width: 12%;"></div>
+          </div>
+        </div>
+
+        <!-- 2. "PÁR DOTAZŮ NA ZAČÁTEK" + TLAČÍTKO ZPĚT -->
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[#E03510]"></span>
+            <span class="text-xs sm:text-sm font-bold text-[#D93814] uppercase tracking-wider">
+              Pár dotazů na začátek
+            </span>
+          </div>
+          <button id="btn-prev-step" onclick="prevQuestion()" class="hidden text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 px-3 py-1.5 rounded-full transition">
+            ← Předchozí dotaz
+          </button>
+        </div>
+
+        <!-- 3. DYNAMICKÝ OBSAH AKTUÁLNÍ OTÁZKY -->
+        <div id="question-body" class="step-animate space-y-4">
+          <!-- Vykresluje JS -->
+        </div>
+
+      </div>
+
+      <!-- Sekce "Už jsem pomohl například..." se zašedlými logy -->
+      <div class="mt-7 text-center space-y-3">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Už jsem pomohl například...
+        </div>
+        <div class="flex items-center justify-center gap-8 sm:gap-12 py-1">
+          <img src="logo-adb-cargo.png" alt="ADB Cargo" class="h-8 sm:h-10 w-auto object-contain opacity-45 grayscale contrast-75 select-none pointer-events-none" />
+          <img src="logo-ita-transport.png" alt="ITA Transport" class="h-7 sm:h-9 w-auto object-contain opacity-45 grayscale contrast-75 select-none pointer-events-none" />
+        </div>
+      </div>
+
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- FÁZE 2: ANIMOVANÉ HLEDÁNÍ ("HLEDÁM, CO TU PRO VÁS MÁME")            -->
+    <!-- =================================================================== -->
+    <section id="searching-section" class="hidden max-w-xl mx-auto">
+      <div class="light-card rounded-3xl p-8 sm:p-10 text-center space-y-6 step-animate">
+
+        <div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+          <div class="absolute inset-0 rounded-full bg-orange-500/15 border border-orange-500/30 radar-ring"></div>
+          <div class="w-12 h-12 rounded-2xl accent-btn flex items-center justify-center text-white shadow-lg">
+            <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+              <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900">
+            Hledám, co tu pro vás máme…
+          </h2>
+          <p class="text-sm text-gray-600">
+            Porovnávám vaše kapacity a trasy s aktuální poptávkou výrobních firem.
+          </p>
+        </div>
+
+        <!-- Živé kroky vyhledávání -->
+        <div class="bg-gray-50/90 border border-gray-200 rounded-2xl p-4 text-left space-y-3 text-xs sm:text-sm">
+          <div id="search-step-1" class="flex items-center gap-3 text-gray-800 font-medium">
+            <span id="search-icon-1" class="w-5 h-5 rounded-full bg-orange-500/15 text-[#D93814] flex items-center justify-center text-xs font-bold">1</span>
+            <span>Procházím výrobní závody a sklady podle vaší základny…</span>
+          </div>
+          <div id="search-step-2" class="flex items-center gap-3 text-gray-400 transition">
+            <span id="search-icon-2" class="w-5 h-5 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-bold">2</span>
+            <span>Filtruji expedice vhodné pro vaše dodávky a časové možnosti…</span>
+          </div>
+          <div id="search-step-3" class="flex items-center gap-3 text-gray-400 transition">
+            <span id="search-icon-3" class="w-5 h-5 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-bold">3</span>
+            <span>Ověřuji firmy, které právě teď hledají externí dopravce…</span>
+          </div>
+        </div>
+
+        <div class="w-full h-2.5 bg-gray-100 border border-gray-200 rounded-full overflow-hidden">
+          <div id="searching-bar" class="h-full accent-progress-bar transition-all duration-700 ease-out" style="width: 25%;"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- FÁZE 3: VÝSLEDEK SHODY ("NAŠEL JSEM X FIREM...") + ROZMAZANÉ VÝSLEDKY-->
+    <!-- =================================================================== -->
+    <section id="matched-section" class="hidden max-w-2xl mx-auto">
+      <div class="light-card rounded-3xl p-6 sm:p-9 space-y-6 step-animate">
+
+        <!-- Odznak + Hlavní sdělení -->
+        <div class="text-center space-y-3">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 flex items-center justify-center text-2xl font-bold">
+            ✓
+          </div>
+          <span class="inline-block text-xs font-bold text-emerald-700 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
+            Vyhodnocení dokončeno • 100 %
+          </span>
+          <h2 id="matched-headline" class="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight">
+            Našel jsem 14 firem, které teď shánějí partnery a mohu vás představit.
+          </h2>
+          <p class="text-sm sm:text-base text-gray-600 max-w-lg mx-auto leading-relaxed">
+            Tyto výrobní firmy odpovídají vašemu kraji, typu vozidel i časovým možnostem a aktuálně řeší posílení dopravy nebo expedice.
+          </p>
+        </div>
+
+        <!-- Rozmazaná ukázka nalezených firem se stupňovaným rozmazáním směrem dolů -->
+        <div class="space-y-2.5 relative">
+          <div class="flex items-center justify-between text-xs font-bold text-gray-500 uppercase">
+            <span>Nalezené firmy vhodné pro přímou spolupráci:</span>
+            <span class="text-[#D93814]">🔒 Neveřejný výběr</span>
+          </div>
+          <div class="matched-list-fade rounded-2xl">
+            <div id="matched-preview-cards" class="space-y-2.5 pb-10"></div>
+          </div>
+        </div>
+
+        <!-- Hlavní CTA tlačítko "Mám zájem" + Menší tlačítko "Podívat se na obecný seznam firem" -->
+        <div class="pt-2 space-y-3 text-center">
+          <button onclick="openInterestNextStep()"
+                  class="w-full accent-btn text-base sm:text-lg font-bold py-4 px-6 rounded-2xl shadow-lg transition hover:scale-[1.01]">
+            Mám zájem
+          </button>
+
+          <div>
+            <button onclick="openCatalogView()"
+                    class="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 px-5 py-2.5 rounded-xl transition">
+              <span>Podívat se na obecný seznam firem</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- FÁZE 4: PO KLIKNUTÍ NA "MÁM ZÁJEM" — "POJĎME SE SPOJIT"              -->
+    <!-- =================================================================== -->
+    <section id="connect-section" class="hidden max-w-2xl mx-auto">
+      <div class="light-card rounded-3xl p-6 sm:p-9 space-y-6 step-animate">
+
+        <div class="space-y-3">
+          <span class="inline-block text-xs font-bold text-[#D93814] bg-orange-500/10 border border-orange-500/25 px-3 py-1 rounded-full">
+            Přímé propojení s výrobními firmami
+          </span>
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+            Pojďme se spojit
+          </h2>
+          <p class="text-base sm:text-lg text-gray-800 font-medium leading-relaxed">
+            Rád o vás zjistím víc a pokud si sedneme, představím vás firmám a domluvím výhodnou spolupráci.
+          </p>
+          <p class="text-sm sm:text-base text-[#D93814] font-semibold bg-orange-500/10 border border-orange-500/20 rounded-2xl p-3.5 leading-relaxed">
+            Dopravců je hodně, a volná místa u firem se proto rychle plní. Čím dřív se ozvete, tím větší máte šanci, že ve vašem kraji ještě bude volno.
+          </p>
+        </div>
+
+        <!-- Jak to funguje -->
+        <div class="bg-gray-50/90 border border-gray-200 rounded-2xl p-5 sm:p-6 space-y-4 text-sm sm:text-base text-gray-700 leading-relaxed">
+          <h3 class="text-base sm:text-lg font-extrabold text-gray-900">
+            Jak to funguje:
+          </h3>
+
+          <p>
+            Nejsem spedice - spolupráce funguje formou jednorázového dohození a vyjednání přímé spolupráce, procenta z jízd si pak už neberu. Pokud budete spokojení, můžeme se pak pobavit o delší spolupráci.
+          </p>
+
+          <!-- Zvýrazněná garance v textu -->
+          <div class="bg-emerald-50/90 border-l-4 border-emerald-600 rounded-r-2xl p-4 text-gray-900 font-semibold shadow-sm">
+            Mám rád férovost. Nabízím tedy <strong class="font-black text-emerald-950 underline decoration-emerald-600 decoration-2 underline-offset-4">garanci</strong>, že pokud v nejhorším případě žádná z firem nevyjde, vrátím vám celou částku balíku. Bez řečí, bez problémů.
+          </div>
+
+          <p>
+            Takto jsem propojil už řadu dopravců. Dokud mám u vedoucích logistiky dveře otevřené a firmy aktivně poptávají další auta, můžete toho využít i vy.
+          </p>
+
+          <div class="pt-3 border-t border-gray-200 space-y-2">
+            <p id="dynamic-price-paragraph" class="font-extrabold text-gray-900 text-base sm:text-lg">
+              Cena je 15 tis. Kč. a zahrnuje celý proces od prvního kontaktu s firmou, domluvení vašich podmínek, až do chvíle, kdy pro ně poprvé vyjedete.
+            </p>
+            <p class="text-xs sm:text-sm text-emerald-800 font-semibold leading-relaxed">
+              V praxi se vám tato částka vrátí už během prvních 3 až 4 přímých jízd, na kterých neodvádíte provizi spedici – všechny další měsíce už jedete čistě do vlastní kapsy.
+            </p>
+          </div>
+        </div>
+
+        <!-- Text pod cenovým blokem -->
+        <p class="text-sm sm:text-base text-gray-700 leading-relaxed px-1">
+          Samozřejmě mi záleží na tom, aby byly firmy spokojené. Proto se s vámi preferuji nejdřív spojit a třeba se i sejít, abychom měli jistotu, že všechno bude v pořádku. Čím více zkušeností máte, tím lépe, ale pomáhám i novějším dopravcům. Napište mi a uvidíme, co pro vás najdu:
+        </p>
+
+        <!-- Zopakovaná garance pod cenovým blokem + česká pečeť "Garance vrácení peněz" -->
+        <div class="bg-gradient-to-br from-emerald-50 via-white to-amber-50/60 border-2 border-emerald-500/40 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-4 shadow-md">
+          <!-- Česká vektorová pečeť Garance vrácení peněz -->
+          <div class="shrink-0">
+            <svg class="w-24 h-24 drop-shadow-md" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="100% Garance vrácení peněz">
+              <defs>
+                <linearGradient id="goldGrad" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#FDE68A"/>
+                  <stop offset="45%" stop-color="#F59E0B"/>
+                  <stop offset="100%" stop-color="#B45309"/>
+                </linearGradient>
+                <linearGradient id="greenCenter" x1="20" y1="20" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#059669"/>
+                  <stop offset="100%" stop-color="#065F46"/>
+                </linearGradient>
+              </defs>
+              <!-- Zoubkovaný okraj pečeti -->
+              <circle cx="60" cy="60" r="54" fill="url(#goldGrad)" stroke="#92400E" stroke-width="2"/>
+              <circle cx="60" cy="60" r="48" fill="none" stroke="#FEF3C7" stroke-width="1.5" stroke-dasharray="3 2"/>
+              <!-- Střed pečeti -->
+              <circle cx="60" cy="60" r="43" fill="url(#greenCenter)"/>
+              <!-- Hvězdičky nahoře -->
+              <text x="60" y="30" text-anchor="middle" fill="#FDE68A" font-size="8" font-weight="800" letter-spacing="2">★ ★ ★</text>
+              <!-- Hlavní nápis 100% GARANCE -->
+              <text x="60" y="49" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="900" font-family="Inter, sans-serif">100%</text>
+              <text x="60" y="63" text-anchor="middle" fill="#FDE68A" font-size="10.5" font-weight="900" font-family="Inter, sans-serif" letter-spacing="0.6">GARANCE</text>
+              <text x="60" y="75" text-anchor="middle" fill="#FFFFFF" font-size="8.2" font-weight="700" font-family="Inter, sans-serif">VRÁCENÍ PENĚZ</text>
+              <!-- Štítek dole -->
+              <rect x="26" y="82" width="68" height="14" rx="7" fill="#F59E0B"/>
+              <text x="60" y="91.5" text-anchor="middle" fill="#111827" font-size="7.5" font-weight="900" font-family="Inter, sans-serif" letter-spacing="0.5">BEZ RIZIKA</text>
+            </svg>
+          </div>
+
+          <div class="text-center sm:text-left space-y-1">
+            <div class="inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-800 uppercase tracking-wide">
+              <span>🛡️ 100% jistota výsledku – nic neriskujete</span>
+            </div>
+            <h4 class="text-base sm:text-lg font-extrabold text-gray-900">
+              Buď vyjedete pro novou přímou firmu, nebo vám vrátím peníze
+            </h4>
+            <p class="text-xs sm:text-sm text-gray-700 leading-relaxed">
+              Platíte pouze za reálný výsledek. Pokud by se náhodou nepodařilo domluvit spolupráci a dovést vás k první jízdě, <strong>dostanete 100 % částky okamžitě zpět na účet</strong>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Kontaktní formulář přímo na stránce -->
+        <div id="connect-form-box" class="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 space-y-4 shadow-sm">
+          <h3 class="text-lg font-bold text-gray-900">Napište mi na WhatsApp</h3>
+
+          <form onsubmit="submitConnectForm(event)" class="space-y-3">
+            <input type="text" id="cf-name" required placeholder="Vaše jméno *"
+                   class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 focus:border-[#027A4C] focus:bg-white focus:outline-none">
+            <input type="tel" id="cf-phone" required placeholder="Telefon *"
+                   class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 focus:border-[#027A4C] focus:bg-white focus:outline-none">
+            <input type="text" id="cf-company" placeholder="Firma / IČO (nepovinné)"
+                   class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 focus:border-[#027A4C] focus:bg-white focus:outline-none">
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 mb-1">Způsob kontaktu</label>
+              <select id="cf-pref" onchange="onConnectPrefChange(this.value)"
+                      class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 font-semibold focus:border-[#027A4C] focus:bg-white focus:outline-none cursor-pointer">
+                <option value="whatsapp" selected>Napište mi na WhatsApp</option>
+                <option value="call">Zavolejte mi</option>
+              </select>
+            </div>
+
+            <button type="submit" id="cf-submit-btn" class="w-full accent-btn text-base py-4 rounded-xl transition">
+              Napište mi na WhatsApp
+            </button>
+            <div class="text-center text-xs text-gray-500 pt-1">Ozvu se do 2 hodin od vyplnění</div>
+          </form>
+        </div>
+
+        <!-- Potvrzení po odeslání -->
+        <div id="connect-success-box" class="hidden bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-2">
+          <div class="w-12 h-12 mx-auto rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center text-2xl font-bold">✓</div>
+          <h3 class="text-2xl font-extrabold text-gray-900">Děkuji za zájem.</h3>
+          <div class="text-xs sm:text-sm text-gray-600">Ozvu se do 2 hodin od vyplnění.</div>
+        </div>
+
+        <!-- Reference pod formulářem (kurzívou, bez jména, malé uvozovky) -->
+        <p class="text-center italic text-sm text-gray-600 leading-relaxed max-w-lg mx-auto pt-1">
+          <span class="text-xs not-italic text-gray-400">"</span>S Michalem se mi spolupracovalo skvěle, je hodně pracovitý a s lidmi to umí. To je něco, co mi jako řidiči s odjetými 15 lety scházelo. Nevzdává se a pracuje i o víkendu, jsem za naší spolupráci rád.<span class="text-xs not-italic text-gray-400">"</span>
+        </p>
+
+        <!-- Sekce "Už jsem pomohl například..." se zašedlými logy -->
+        <div class="pt-3 border-t border-gray-200/80 text-center space-y-3">
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Už jsem pomohl například...
+          </div>
+          <div class="flex items-center justify-center gap-8 sm:gap-12 py-1">
+            <img src="logo-adb-cargo.png" alt="ADB Cargo" class="h-8 sm:h-10 w-auto object-contain opacity-45 grayscale contrast-75 select-none pointer-events-none" />
+            <img src="logo-ita-transport.png" alt="ITA Transport" class="h-7 sm:h-9 w-auto object-contain opacity-45 grayscale contrast-75 select-none pointer-events-none" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 text-xs">
+          <button onclick="backToMatchedSection()" class="text-gray-500 hover:text-gray-900 underline">
+            ← Zpět na předchozí krok
+          </button>
+          <button onclick="openCatalogView()" class="text-gray-500 hover:text-gray-900 underline">
+            Podívat se na obecný seznam firem →
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- FÁZE 5: OBECNÝ SEZNAM FIREM (BEZ FILTROVÁNÍ PODLE DOTAZNÍKU)        -->
+    <!-- =================================================================== -->
+    <section id="catalog-section" class="hidden space-y-6 step-animate">
+
+      <!-- Horní upozornění, že jde pouze o obecný seznam zdarma -->
+      <div class="light-card rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-[#E03510]">
+        <div class="space-y-1 max-w-2xl">
+          <span class="text-xs font-bold text-[#D93814] uppercase">Obecný veřejný katalog (zdarma)</span>
+          <h2 class="text-lg sm:text-xl font-extrabold text-gray-900">
+            Toto je pouze obecný seznam firem bez napojení na vaše odpovědi
+          </h2>
+          <p class="text-xs sm:text-sm text-gray-600 leading-relaxed">
+            V obecném seznamu níže si musíte firmy obvolávat sami naslepo. Pokud chcete <strong>představit přímo firmám, které teď reálně shánějí dopravce podle vašeho profilu (s garancí vrácení peněz)</strong>, přejděte na osobní propojení.
+          </p>
+        </div>
+        <button onclick="openInterestNextStep()"
+                class="shrink-0 accent-btn text-xs sm:text-sm px-5 py-3.5 rounded-2xl font-bold transition">
+          Chci osobní představení firmám →
+        </button>
+      </div>
+
+      <!-- Hlavička obecného seznamu -->
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h3 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            Obecný seznam výrobních firem v ČR
+          </h3>
+          <p class="text-sm text-gray-600 mt-1">
+            Základní přehled výrobních podniků z rejstříku ARES (CZ-NACE 10–33).
+          </p>
+        </div>
+
+        <div class="light-card-subtle rounded-2xl px-4 py-2.5 shrink-0 text-xs sm:text-sm">
+          <span class="text-gray-500">Vaše poznamenané firmy:</span>
+          <strong id="crm-stats" class="text-[#D93814] ml-1">0 osloveno • 0 jezdíme</strong>
+        </div>
+      </div>
+
+      <!-- Základní nepersonalizované filtry -->
+      <div class="light-card-subtle rounded-3xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <select id="f-region" onchange="renderLeads()" class="bg-white border border-gray-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-gray-800 focus:outline-none">
+            <option value="all">Všechny kraje ČR</option>
+          </select>
+
+          <select id="f-status" onchange="renderLeads()" class="bg-white border border-gray-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-gray-800 focus:outline-none">
+            <option value="all">Všechny stavy</option>
+            <option value="none">Dosud neoslovené</option>
+            <option value="called">Osloveno</option>
+            <option value="won">Jezdíme pro ně</option>
+          </select>
+        </div>
+
+        <input type="text" id="f-search" oninput="renderLeads()" placeholder="Hledat v obecném seznamu..."
+               class="bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm text-gray-900 w-full sm:w-64 focus:border-[#E03510] focus:outline-none">
+      </div>
+
+      <!-- SEZNAM KARET VÝROBNÍCH FIREM (Nepersonalizovaný obecný seznam) -->
+      <div id="leads-container" class="space-y-4"></div>
+
+      <!-- SPODNÍ KARTA -->
+      <div class="mt-8 light-card rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+        <div class="space-y-1.5 max-w-2xl">
+          <span class="text-xs font-bold text-[#D93814] uppercase">Garance vrácení peněz</span>
+          <h3 class="text-lg sm:text-xl font-extrabold text-gray-900">
+            Nechcete ztrácet čas studeným obvoláváním obecného seznamu?
+          </h3>
+          <p class="text-sm text-gray-600 leading-relaxed">
+            Představím vás přímo firmám, které teď shánějí partnery a domluvím vám podmínky až po první jízdu.
+          </p>
+        </div>
+        <button onclick="openInterestNextStep()"
+                class="shrink-0 px-6 py-3.5 rounded-2xl text-sm font-bold accent-btn transition">
+          Mám zájem o představení
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="shared.js"></script>
+  <script src="leads-data.js"></script>
+  <script>
+    // Poznámka: Na této stránce záměrně NEVOLÁME window.APP.mountHeader(),
+    // protože nahoře je pouze čisté logo a celá stránka je v čistém světlém režimu.
+
+    // =========================================================================
+    // 1. DEFINICE ROZHODOVACÍHO STROMU OTÁZEK (VĚTVENÝ DOTAZNÍK)
+    // =========================================================================
+    // Procenta postupu: Rychlý skok na začátku, postupné zpomalování ke konci
+    const PROGRESS_CURVE = [12, 34, 52, 66, 77, 85, 90, 94, 96, 98, 99];
+
+    let wizardAnswers = JSON.parse(localStorage.getItem("dodavkari_firmy_wizard_v1") || "{}");
+    let stepHistory = ["kraj"];
+    let currentStepId = "kraj";
+
+    // Výpočet ceny balíku podle počtu dodávek:
+    // 15 tis. pro nejmenší (1 auto), pak 20 tis. (2–4), 25 tis. (5–10) a 35 tis. (10+)
+    function getPriceByVanCount() {
+      const vanCount = wizardAnswers.pocet_aut?.value || "solo";
+      if (vanCount === "2_4") return "20 tis.";
+      if (vanCount === "5_10") return "25 tis.";
+      if (vanCount === "10_plus") return "35 tis.";
+      return "15 tis.";
+    }
+
+    function getStepDefinition(stepId, ans) {
+      const isSolo = ans.pocet_aut?.value === "solo";
+      const isVnitroOnly = ans.zeme?.value === "vnitro";
+      const canDoExpress = ans.expres?.value !== "planned_only";
+
+      const steps = {
+        // KROK 1: Kraj základny
+        kraj: {
+          id: "kraj",
+          question: "Ve kterém kraji máte základnu (odkud nejčastěji vyjíždíte)?",
+          subtext: "Podle vaší výchozí lokality vybereme výrobní firmy a sklady přímo ve vašem dosahu.",
+          layout: "regions",
+          options: [
+            { value: "all", label: "Všechny kraje ČR (Jezdíme po celé republice)", highlight: true, badge: "Celá ČR" },
+            { value: "Plzeňský kraj", label: "Plzeňský kraj" },
+            { value: "Středočeský kraj", label: "Středočeský kraj" },
+            { value: "Hlavní město Praha", label: "Praha" },
+            { value: "Jihomoravský kraj", label: "Jihomoravský kraj" },
+            { value: "Moravskoslezský kraj", label: "Moravskoslezský" },
+            { value: "Pardubický kraj", label: "Pardubický kraj" },
+            { value: "Královéhradecký kraj", label: "Královéhradecký" },
+            { value: "Jihočeský kraj", label: "Jihočeský kraj" },
+            { value: "Ústecký kraj", label: "Ústecký kraj" },
+            { value: "Kraj Vysočina", label: "Kraj Vysočina" },
+            { value: "Olomoucký kraj", label: "Olomoucký kraj" },
+            { value: "Zlínský kraj", label: "Zlínský kraj" },
+            { value: "Liberecký kraj", label: "Liberecký kraj" },
+            { value: "Karlovarský kraj", label: "Karlovarský kraj" }
+          ],
+          next: () => "pocet_aut"
+        },
+
+        // KROK 2: Počet dodávek (Větví dotazník i výslednou cenu 15 / 20 / 25 / 35 tis. Kč)
+        pocet_aut: {
+          id: "pocet_aut",
+          question: "Kolik dodávek do 3,5 t aktuálně provozujete?",
+          subtext: "Některé výrobní firmy hledají jednoho spolehlivého dopravce, jiné potřebují vykrýt větší objemy více vozy.",
+          options: [
+            { value: "solo", label: "Jen jednu, jezdím sám", desc: "Jsem řidič a majitel v jedné osobě", highlight: true },
+            { value: "2_4", label: "2 až 4 dodávky", desc: "Menší flotila s vlastními řidiči" },
+            { value: "5_10", label: "5 až 10 dodávek", desc: "Středně velká dopravní firma" },
+            { value: "10_plus", label: "Více než 10 dodávek", desc: "Větší flotila s pravidelnou kapacitou" }
+          ],
+          next: () => "historie"
+        },
+
+        // KROK 3: Délka praxe (Větveno podle počtu aut)
+        historie: {
+          id: "historie",
+          question: isSolo
+            ? "Jak dlouho už s dodávkou jezdíte?"
+            : "Jak dlouho už vaše dopravní firma funguje?",
+          subtext: isSolo
+            ? "Výrobní firmy rády spolupracují jak se zkušenými profesionály, tak se spolehlivými dopravci, kteří chtějí jezdit napřímo."
+            : "Délka historie firmy nám pomůže vybrat výrobní závody se správnými požadavky na objem přeprav a splatnost.",
+          options: isSolo
+            ? [
+                { value: "under_1y", label: "Méně než 1 rok", desc: "Nedávno jsem začal jezdit na sebe" },
+                { value: "1_3y", label: "1 až 3 roky", desc: "Mám už stabilní praxi za volantem" },
+                { value: "3_7y", label: "3 až 7 let", desc: "Znalost tras i nakládek po ČR a EU" },
+                { value: "over_7y", label: "Více než 7 let zkušeností", desc: "Dlouholetý profesionál v oboru", highlight: true }
+              ]
+            : [
+                { value: "under_1y", label: "Méně než 1 rok", desc: "Nově založená dopravní firma" },
+                { value: "1_3y", label: "1 až 3 roky na trhu", desc: "Rozvíjející se autodoprava" },
+                { value: "3_7y", label: "3 až 7 let na trhu", desc: "Zavedená dopravní společnost" },
+                { value: "over_7y", label: "Více než 7 let na trhu", desc: "Stabilní dopravce s historií", highlight: true }
+              ],
+          next: () => "typ_aut"
+        },
+
+        // KROK 4: Typ dodávky (Větveno podle počtu aut)
+        typ_aut: {
+          id: "typ_aut",
+          question: isSolo
+            ? "Jaké provedení dodávky máte k dispozici?"
+            : "Jaké typy dodávek máte ve své flotile?",
+          subtext: "Přiřadíme k vám výrobní závody podle toho, zda nakládají bočně vozíkem, jeřábem nebo z rampy.",
+          options: isSolo
+            ? [
+                { value: "plachta", label: "Plachtová dodávka (8–10 EUR palet)", desc: "Boční shrnování plachty, ideální pro průmysl a palety", highlight: true },
+                { value: "plechovka", label: "Plechová dodávka / furgon (4–6 palet)", desc: "Rychlé expresní zásilky, menší paletové náklady" },
+                { value: "skrin_celo", label: "Skříňová dodávka nebo auto s čelem", desc: "Pevná nástavba / hydraulické čelo pro snazší vykládku" },
+                { value: "special", label: "Chladírenská (Frigo) nebo výbava ADR", desc: "Teplotní režim nebo přeprava nebezpečného zboží" }
+              ]
+            : [
+                { value: "plachta", label: "Převážně plachtové dodávky (8–10 EUR palet)", desc: "Hlavní kapacita v plachtových vozech", highlight: true },
+                { value: "plechovka", label: "Převážně plechové dodávky / furgony (4–6 palet)", desc: "Rychlé dodávky pro menší a expresní náklady" },
+                { value: "mix", label: "Kombinace plachet i plechovek (+ auta s čelem)", desc: "Dokážeme pokrýt jakýkoliv typ nakládky" },
+                { value: "special", label: "Speciální vozidla (Frigo / Chlaďáky / ADR)", desc: "Specializovaná flotila s vyšší přidanou hodnotou" }
+              ],
+          next: () => "zeme"
+        },
+
+        // KROK 5: Preferované země (Top volba: "Všechny země")
+        zeme: {
+          id: "zeme",
+          question: "Kam nejraději jezdíte (preferované země)?",
+          subtext: "Zvolte všechny země pro maximální výběr zakázek, nebo svůj hlavní směr.",
+          options: [
+            { value: "all_eu", label: "Všechny země (Celá EU i ČR bez omezení)", desc: "Kamkoliv, kde je dobře zaplacená přeprava", highlight: true },
+            { value: "de_at", label: "Německo a Rakousko (DE, AT + ČR)", desc: "Nejčastější exportní trasy českých výrobních firem" },
+            { value: "west_eu", label: "Západní Evropa (Německo, Benelux, Francie)", desc: "Delší mezinárodní trasy s vysokým nájezdem" },
+            { value: "south_eu", label: "Jižní směr a Alpy (Rakousko, Itálie, Švýcarsko)", desc: "Pravidelný průmyslový export na jih" },
+            { value: "vnitro", label: "Jen vnitro (Česká republika a Slovensko)", desc: "Přepravy mezi českými a slovenskými závody" }
+          ],
+          next: () => "spani"
+        },
+
+        // KROK 6: Spaní v autě a vícedenní výjezdy (Větveno podle Kroku 2 a Kroku 5)
+        spani: {
+          id: "spani",
+          question: isVnitroOnly
+            ? "Můžete i v rámci ČR a Slovenska přespat v autě na více dní?"
+            : (isSolo
+                ? "Můžete v autě přespat a vyjet na trasu na více dní?"
+                : "Mohou vaši řidiči v autech spát a jezdit na více dní?"),
+          subtext: isVnitroOnly
+            ? "Některé výrobní firmy propojují pobočky mezi Čechami, Moravou a Slovenskem v 2–3denních kolečkách."
+            : "U exportních fabrik do Německa či Francie to otevírá přístup k nejlépe placeným okruhům.",
+          options: isVnitroOnly
+            ? [
+                { value: "multi_days", label: "Ano, přespání na 2–4 dny není problém", desc: "Mohu zůstat na trase podle potřeby zakázky", highlight: true },
+                { value: "1_night", label: "Maximálně 1 noc venku", desc: "Např. dvoudenní otočka na Moravu nebo Slovensko" },
+                { value: "daily_home", label: "Ne, chci být každý večer doma", desc: "Hledám výhradně denní rozvozy kolem základny" }
+              ]
+            : [
+                { value: "week_turnus", label: isSolo ? "Ano, mám spaní a vyjíždím klidně na 3 až 5 dní" : "Ano, auta mají spaní a řidiči jezdí celý týden (Po–Pá)", desc: "Plná flexibilita pro mezinárodní kolečka", highlight: true },
+                { value: "long_turnus", label: "Ano, zvládneme i delší turnusy včetně víkendu", desc: "Ideální pro dlouhé trasy po celé Evropě" },
+                { value: "short_turn", label: "Maximálně 1 až 2 noci venku (rychlá otočka)", desc: "Rychlý vývoz do zahraničí a zpátečka domů" },
+                { value: "daily_home", label: "Pouze denní otočky s návratem každý den", desc: "Kratší příhraniční nebo vnitrostátní trasy" }
+              ],
+          next: () => "dny"
+        },
+
+        // KROK 7: Preferované dny (Top volba: "Jakékoliv dny")
+        dny: {
+          id: "dny",
+          question: "Které dny v týdnu potřebujete zakázky nejvíce?",
+          subtext: "Ať už hledáte plné vytížení na celý týden, nebo dokládky na vybrané dny.",
+          options: [
+            { value: "any_days", label: "Jakékoliv dny (Celý týden bez omezení)", desc: "Můžeme vyjet kdykoliv od pondělí do neděle", highlight: true },
+            { value: "mon_fri", label: "Standardní pracovní týden (Pondělí – Pátek)", desc: "Jezdíme v pracovní dny, víkendy volné" },
+            { value: "mon_wed", label: "Začátek týdne (Pondělí – Středa)", desc: "Potřebujeme hlavně rozjezdy na začátku týdne" },
+            { value: "thu_fri", label: "Konec týdne a zpátečky (Čtvrtek – Pátek)", desc: "Hledáme vytížení na druhou polovinu týdne" },
+            { value: "weekends", label: "Víkendy a noční přepravy (Sobota – Neděle)", desc: "Specializujeme se na víkendové závozy" }
+          ],
+          next: () => "expres"
+        },
+
+        // KROK 8: Urgentní a expresní jízdy
+        expres: {
+          id: "expres",
+          question: "Zvládnete i urgentní expresní výjezdy (když fabrice hoří linka a potřebuje odjet hned)?",
+          subtext: "Expresní Just-in-Time přepravy bývají u přímých výrobců nejlépe zaplacené a nejrychleji vedou k dlouhodobé spolupráci.",
+          options: [
+            { value: "express_247", label: "Ano, držíme pohotovost a umíme vyjet okamžitě", desc: "Včetně večerních hodin nebo víkendů", highlight: true },
+            { value: "express_day", label: "Ano, během dne, pokud máme zrovna volné auto", desc: "Rádi vezmeme expresku, když jsme poblíž" },
+            { value: "planned_only", label: "Spíše ne, hledáme předem naplánované pravidelné jízdy", desc: "Preferujeme pevný harmonogram nakládek" }
+          ],
+          next: () => "final_detail"
+        },
+
+        // KROK 9: Větvená otázka podle Kroku 8 (Rychlost přistavení vs. Režim spolupráce)
+        final_detail: {
+          id: "final_detail",
+          question: canDoExpress
+            ? "Jak rychle dokážete ve svém kraji přistavit dodávku k nakládce od zavolání?"
+            : "Jaký režim spolupráce s výrobní firmou vám vyhovuje nejvíce?",
+          subtext: canDoExpress
+            ? "Podle rychlosti přistavení vás zařadíme na prioritní seznam pro vedoucí expedice."
+            : "Abychom vám vybrali výrobní firmy, které hledají přesně tento typ smluvního dopravce.",
+          options: canDoExpress
+            ? [
+                { value: "under_90m", label: "Do 60 až 90 minut od potvrzení", desc: "Špičková pohotovost pro kritické Just-in-Time zásilky", highlight: true },
+                { value: "2_3h", label: "Do 2 až 3 hodin od potvrzení", desc: "Standardní expresní přistavení v rámci kraje" },
+                { value: "same_day", label: "Během téhož dne (do 4–6 hodin)", desc: "Operativní odvoz ještě v den objednávky" },
+                { value: "next_morning", label: "Následující pracovní den ráno", desc: "Přistavení na ranní směnu v 6:00–8:00" }
+              ]
+            : [
+                { value: "weekly_rounds", label: "Pravidelná týdenní kolečka (stálé trasy)", desc: "Stabilní odvozy každý týden ve stejné dny", highlight: true },
+                { value: "daily_shuttle", label: "Pravidelné denní rozvozy mezi závody a sklady", desc: "Stálá práce kolem komína na každý den" },
+                { value: "guaranteed_km", label: "Garantovaný objem kilometrů měsíčně na smlouvu", desc: "Jistota vytížení a předvídatelné fakturace" },
+                { value: "backhauls", label: "Pravidelné zpátečky a dokládky přímo od výrobců", desc: "Doplnění našich stávajících tras bez spedic" }
+              ],
+          next: () => "marze_spedice"
+        },
+
+        // KROK 10: SPIN otázka na provize spedic a překupníků
+        marze_spedice: {
+          id: "marze_spedice",
+          question: "Kolik procent z vaší jízdy si dnes podle vašeho odhadu ukrojí spedice a překupníci?",
+          subtext: "U přímých výrobních firem celá tato částka zůstává vám.",
+          options: [
+            { value: "15_20_pct", label: "Kolem 15–20 % z ceny jízdy" },
+            { value: "25_30_pct", label: "Často i 25–30 %, když jde zakázka přes více rukou", highlight: true },
+            { value: "no_count_direct", label: "Nechci to raději ani počítat, chci jezdit napřímo" }
+          ],
+          next: () => "cena_km"
+        },
+
+        // KROK 11: Ideální cena za km (s dobrými možnostmi nebo vlastním textovým polem)
+        cena_km: {
+          id: "cena_km",
+          question: "Jaká je vaše ideální cena za km?",
+          subtext: "Poslední dotaz – vyberte jednu z možností níže, nebo napište svou vlastní představu.",
+          allowCustomText: true,
+          customPlaceholder: "Napište vlastní cenu (např. 19 Kč/km nebo paušál)...",
+          options: [
+            { value: "16_18_czk", label: "16 až 18 Kč/km (cca 0,65 – 0,72 €/km)", desc: "Férový základ u pravidelných přímých tras a koleček" },
+            { value: "18_21_czk", label: "18 až 21 Kč/km (cca 0,72 – 0,85 €/km)", desc: "Zdravá sazba u přímých výrobních firem bez spedice", highlight: true },
+            { value: "22_plus_czk", label: "22 Kč/km a více (0,90+ €/km)", desc: "Expresní Just-in-Time jízdy, čelo nebo speciály" }
+          ],
+          next: () => null
+        }
+      };
+
+      return steps[stepId];
+    }
+
+    // =========================================================================
+    // 2. VYKRESLENÍ AKTUÁLNÍ OTÁZKY (SVĚTLÝ REŽIM)
+    // =========================================================================
+    function renderCurrentQuestion() {
+      const stepIndex = stepHistory.length - 1;
+      const pct = PROGRESS_CURVE[Math.min(stepIndex, PROGRESS_CURVE.length - 1)];
+
+      document.getElementById("progress-pct").textContent = `${pct} %`;
+      document.getElementById("progress-bar-fill").style.width = `${pct}%`;
+
+      const prevBtn = document.getElementById("btn-prev-step");
+      if (stepHistory.length > 1) {
+        prevBtn.classList.remove("hidden");
+      } else {
+        prevBtn.classList.add("hidden");
+      }
+
+      const def = getStepDefinition(currentStepId, wizardAnswers);
+      const body = document.getElementById("question-body");
+
+      body.classList.remove("step-animate");
+      void body.offsetWidth;
+      body.classList.add("step-animate");
+
+      const selectedVal = wizardAnswers[currentStepId]?.value || "";
+
+      if (def.layout === "regions") {
+        const topOpt = def.options[0];
+        const regOpts = def.options.slice(1);
+        body.innerHTML = `
+          <div class="space-y-1.5">
+            <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 leading-snug">${def.question}</h2>
+            <p class="text-xs sm:text-sm text-gray-600">${def.subtext}</p>
+          </div>
+
+          <!-- Top zvýrazněná volba: Všechny kraje -->
+          <button type="button" onclick="selectAnswer('${def.id}', '${topOpt.value}', '${topOpt.label}')"
+                  class="w-full text-left p-4 rounded-2xl border transition flex items-center justify-between gap-3 ${selectedVal === topOpt.value ? 'accent-pill-active' : 'bg-orange-50/90 hover:bg-orange-100/80 border-orange-300 text-gray-900'}">
+            <div>
+              <div class="font-bold text-sm sm:text-base">${topOpt.label}</div>
+              <div class="text-xs ${selectedVal === topOpt.value ? 'text-white/90' : 'text-[#D93814]'} mt-0.5">Ukážeme vám příležitosti ze všech regionů ČR</div>
+            </div>
+            <span class="shrink-0 text-xs font-bold px-3 py-1 rounded-full ${selectedVal === topOpt.value ? 'bg-white/20 text-white' : 'bg-orange-500/15 text-[#D93814] border border-orange-500/25'}">Doporučeno</span>
+          </button>
+
+          <!-- Mřížka jednotlivých krajů (2 sloupce) -->
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            ${regOpts.map(o => `
+              <button type="button" onclick="selectAnswer('${def.id}', '${o.value}', '${o.label}')"
+                      class="text-left px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border text-xs sm:text-sm font-semibold transition flex items-center justify-between gap-1 ${selectedVal === o.value ? 'accent-pill-active' : 'bg-white hover:bg-orange-50/50 border-gray-200 hover:border-orange-300 text-gray-800'}">
+                <span class="truncate">${o.label}</span>
+                <span class="hidden sm:inline text-gray-400 text-xs shrink-0">→</span>
+              </button>
+            `).join("")}
+          </div>
+        `;
+      } else {
+        body.innerHTML = `
+          <div class="space-y-1.5">
+            <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 leading-snug">${def.question}</h2>
+            <p class="text-xs sm:text-sm text-gray-600">${def.subtext}</p>
+          </div>
+
+          <div class="space-y-2.5 pt-1">
+            ${def.options.map(o => {
+              const isSel = selectedVal === o.value;
+              return `
+                <button type="button" onclick="selectAnswer('${def.id}', '${o.value}', '${o.label.replace(/'/g, "\\'")}')"
+                        class="w-full text-left p-4 rounded-2xl border transition flex items-center justify-between gap-3 ${isSel ? 'accent-pill-active' : (o.highlight ? 'bg-orange-50/80 hover:bg-orange-100/70 border-orange-300 text-gray-900' : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-orange-300 text-gray-900')}">
+                  <div class="space-y-0.5">
+                    <div class="font-bold text-sm sm:text-base flex items-center gap-2 flex-wrap">
+                      <span>${o.label}</span>
+                      ${o.highlight ? `<span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${isSel ? 'bg-white/20 text-white' : 'bg-orange-500/15 text-[#D93814]'}">Nejčastější volba</span>` : ``}
+                    </div>
+                    ${o.desc ? `<div class="text-xs ${isSel ? 'text-white/90' : 'text-gray-500'}">${o.desc}</div>` : ``}
+                  </div>
+                  <span class="shrink-0 w-8 h-8 rounded-xl ${isSel ? 'bg-white/20 text-white' : 'bg-gray-100 text-[#D93814]'} flex items-center justify-center text-sm font-bold">→</span>
+                </button>
+              `;
+            }).join("")}
+          </div>
+
+          ${def.allowCustomText ? `
+            <div class="pt-2 space-y-2.5">
+              <div class="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase">
+                <div class="flex-1 h-px bg-gray-200"></div>
+                <span>nebo</span>
+                <div class="flex-1 h-px bg-gray-200"></div>
+              </div>
+              <form onsubmit="submitCustomAnswer(event, '${def.id}')" class="flex flex-col sm:flex-row gap-2">
+                <input type="text" id="custom-ans-input" placeholder="${def.customPlaceholder || 'Vaše odpověď...'}"
+                       class="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm sm:text-base text-gray-900 focus:border-[#027A4C] focus:outline-none">
+                <button type="submit" class="accent-btn px-6 py-3 rounded-xl text-sm sm:text-base font-bold shrink-0 transition">
+                  Pokračovat →
+                </button>
+              </form>
+            </div>
+          ` : ``}
+        `;
+      }
+    }
+
+    function submitCustomAnswer(e, stepId) {
+      e.preventDefault();
+      const inp = document.getElementById("custom-ans-input");
+      const val = inp ? inp.value.trim() : "";
+      if (!val) {
+        if (inp) inp.focus();
+        return;
+      }
+      selectAnswer(stepId, "custom_" + val, val);
+    }
+
+    // Mapa 2. pádu krajů pro přirozenou češtinu ve FOMO notifikaci ("Právě se přidal dopravce z ...")
+    const REGION_GENITIVE = {
+      "Plzeňský kraj": "Plzeňského kraje",
+      "Středočeský kraj": "Středočeského kraje",
+      "Hlavní město Praha": "Prahy",
+      "Jihomoravský kraj": "Jihomoravského kraje",
+      "Moravskoslezský kraj": "Moravskoslezského kraje",
+      "Pardubický kraj": "Pardubického kraje",
+      "Královéhradecký kraj": "Královéhradeckého kraje",
+      "Jihočeský kraj": "Jihočeského kraje",
+      "Ústecký kraj": "Ústeckého kraje",
+      "Kraj Vysočina": "Kraje Vysočina",
+      "Olomoucký kraj": "Olomouckého kraje",
+      "Zlínský kraj": "Zlínského kraje",
+      "Liberecký kraj": "Libereckého kraje",
+      "Karlovarský kraj": "Karlovarského kraje"
+    };
+
+    function maybeTriggerLifetimeFomoPopup() {
+      // Zobrazí se až v druhé polovině dotazníku (od 6. kroku dál, dlouho po volbě kraje) — 1x za život návštěvníka
+      if (stepHistory.length < 6) return;
+      if (localStorage.getItem("dodavkari_fomo_seen_v4")) return;
+
+      localStorage.setItem("dodavkari_fomo_seen_v4", "1");
+
+      const chosenReg = wizardAnswers.kraj?.value;
+      const genitive = (chosenReg && REGION_GENITIVE[chosenReg])
+        ? REGION_GENITIVE[chosenReg]
+        : "Plzeňského kraje";
+      const prep = genitive.startsWith("S") ? "ze" : "z";
+
+      const toast = document.getElementById("fomo-lifetime-toast");
+      const textEl = document.getElementById("fomo-lifetime-text");
+      if (!toast || !textEl) return;
+
+      textEl.textContent = `Právě se přidal dopravce ${prep} ${genitive}`;
+      toast.classList.remove("hidden", "opacity-0", "translate-y-3");
+      toast.classList.add("flex");
+
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-3");
+        setTimeout(() => {
+          toast.classList.add("hidden");
+          toast.classList.remove("flex");
+        }, 400);
+      }, 7500);
+    }
+
+    function selectAnswer(stepId, value, label) {
+      wizardAnswers[stepId] = { value, label };
+      localStorage.setItem("dodavkari_firmy_wizard_v1", JSON.stringify(wizardAnswers));
+
+      const def = getStepDefinition(stepId, wizardAnswers);
+      const nextStepId = def.next ? def.next(value) : null;
+
+      if (nextStepId) {
+        currentStepId = nextStepId;
+        stepHistory.push(nextStepId);
+        renderCurrentQuestion();
+        maybeTriggerLifetimeFomoPopup();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        document.getElementById("progress-pct").textContent = "100 %";
+        document.getElementById("progress-bar-fill").style.width = "100%";
+        setTimeout(() => startSearchingAnimation(), 220);
+      }
+    }
+
+    function prevQuestion() {
+      if (stepHistory.length <= 1) return;
+      stepHistory.pop();
+      currentStepId = stepHistory[stepHistory.length - 1];
+      renderCurrentQuestion();
+    }
+
+    // =========================================================================
+    // 3. ANIMACE "HLEDÁM, CO TU PRO VÁS MÁME..." A ROZMAZANÉ VÝSLEDKY
+    // =========================================================================
+    function startSearchingAnimation() {
+      document.getElementById("wizard-section").classList.add("hidden");
+      document.getElementById("matched-section").classList.add("hidden");
+      document.getElementById("connect-section").classList.add("hidden");
+      document.getElementById("catalog-section").classList.add("hidden");
+
+      const sec = document.getElementById("searching-section");
+      sec.classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      const bar = document.getElementById("searching-bar");
+      const s2 = document.getElementById("search-step-2");
+      const s3 = document.getElementById("search-step-3");
+      const i1 = document.getElementById("search-icon-1");
+      const i2 = document.getElementById("search-icon-2");
+      const i3 = document.getElementById("search-icon-3");
+
+      bar.style.width = "32%";
+
+      setTimeout(() => {
+        bar.style.width = "68%";
+        i1.textContent = "✓";
+        i1.className = "w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center text-xs font-bold";
+        s2.className = "flex items-center gap-3 text-gray-800 font-medium transition";
+        i2.className = "w-5 h-5 rounded-full bg-orange-500/15 text-[#D93814] flex items-center justify-center text-xs font-bold";
+      }, 850);
+
+      setTimeout(() => {
+        bar.style.width = "100%";
+        i2.textContent = "✓";
+        i2.className = "w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center text-xs font-bold";
+        s3.className = "flex items-center gap-3 text-gray-800 font-medium transition";
+        i3.className = "w-5 h-5 rounded-full bg-orange-500/15 text-[#D93814] flex items-center justify-center text-xs font-bold";
+      }, 1700);
+
+      setTimeout(() => {
+        i3.textContent = "✓";
+        i3.className = "w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center text-xs font-bold";
+        showMatchedResults();
+      }, 2550);
+    }
+
+    function getMatchedCountAndList() {
+      const all = window.LEADS_DATA || [];
+      const reg = wizardAnswers.kraj?.value || "all";
+
+      let direct = all.filter(l => reg === "all" || l.region === reg || l.region === "Česká republika");
+      if (reg !== "all" && direct.length < 11) {
+        const extraNeeded = 14 - direct.length;
+        const extras = all.filter(l => !direct.includes(l)).slice(0, extraNeeded);
+        direct = [...direct, ...extras];
+      }
+      return {
+        count: direct.length,
+        list: direct
+      };
+    }
+
+    function showMatchedResults() {
+      document.getElementById("searching-section").classList.add("hidden");
+      document.getElementById("connect-section").classList.add("hidden");
+      document.getElementById("catalog-section").classList.add("hidden");
+
+      const sec = document.getElementById("matched-section");
+      sec.classList.remove("hidden");
+
+      const { count, list } = getMatchedCountAndList();
+
+      document.getElementById("matched-headline").textContent =
+        `Našel jsem ${count} firem, které teď shánějí partnery a mohu vás představit.`;
+
+      // Rozmazané karty nalezených firem (bez bubliny "Ověřená poptávka" a se stupňovaným rozmazáním směrem dolů)
+      const preview = list.slice(0, 4);
+      document.getElementById("matched-preview-cards").innerHTML = preview.map((l, idx) => {
+        const extraCardBlur = idx === 2 ? "filter: blur(2.5px); opacity: 0.78;" : (idx === 3 ? "filter: blur(6px); opacity: 0.45;" : "");
+        return `
+          <div style="${extraCardBlur}" class="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm select-none">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <strong class="text-gray-900 text-sm sm:text-base blurred-secret">Výrobní závod #${idx + 1} – ${l.name}</strong>
+              </div>
+              <div class="text-xs text-gray-600">
+                <span class="text-[#D93814] font-bold">${l.region}</span> • ${l.recommendedVan}
+              </div>
+              <div class="text-xs text-gray-500 blurred-secret">
+                ${l.contactPerson} • ${l.contactPhone} • ${l.contactEmail}
+              </div>
+            </div>
+            <span class="shrink-0 text-xs font-bold text-[#D93814] bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-xl">
+              Shání dopravce
+            </span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // =========================================================================
+    // 4. KROK "POJĎME SE SPOJIT" (PO KLIKNUTÍ NA "MÁM ZÁJEM")
+    // =========================================================================
+    function openInterestNextStep() {
+      document.getElementById("wizard-section").classList.add("hidden");
+      document.getElementById("searching-section").classList.add("hidden");
+      document.getElementById("matched-section").classList.add("hidden");
+      document.getElementById("catalog-section").classList.add("hidden");
+
+      const con = document.getElementById("connect-section");
+      con.classList.remove("hidden");
+
+      // Nastavení dynamické ceny (15 / 20 / 25 / 35 tis. Kč podle počtu aut)
+      const priceStr = getPriceByVanCount();
+      document.getElementById("dynamic-price-paragraph").textContent =
+        `Cena je ${priceStr} Kč. a zahrnuje celý proces od prvního kontaktu s firmou, domluvení vašich podmínek, až do chvíle, kdy pro ně poprvé vyjedete.`;
+
+      // Předvyplnění uložených kontaktních údajů, pokud už někdy vyplňoval
+      document.getElementById("cf-name").value = localStorage.getItem("lead_name") || "";
+      document.getElementById("cf-phone").value = localStorage.getItem("lead_phone") || "";
+      document.getElementById("cf-company").value = localStorage.getItem("lead_company") || "";
+
+      document.getElementById("connect-form-box").classList.remove("hidden");
+      document.getElementById("connect-success-box").classList.add("hidden");
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function onConnectPrefChange(val) {
+      const btn = document.getElementById("cf-submit-btn");
+      if (!btn) return;
+      btn.textContent = val === "call" ? "Zavolejte mi" : "Napište mi na WhatsApp";
+    }
+
+    function getWizardSummaryText() {
+      const keys = ["kraj", "pocet_aut", "historie", "typ_aut", "zeme", "spani", "dny", "expres", "final_detail", "marze_spedice", "cena_km"];
+      return keys.map(k => wizardAnswers[k]?.label).filter(Boolean).join(" | ");
+    }
+
+    function submitConnectForm(e) {
+      e.preventDefault();
+      const name = document.getElementById("cf-name").value.trim();
+      const phone = document.getElementById("cf-phone").value.trim();
+      const company = document.getElementById("cf-company").value.trim();
+      const pref = document.getElementById("cf-pref").value;
+      const isCall = pref === "call";
+      const priceStr = getPriceByVanCount();
+      const topic = `Balík doporučení (${priceStr} Kč) — ${getWizardSummaryText() || "Přímé firmy"}`;
+
+      localStorage.setItem("lead_name", name);
+      localStorage.setItem("lead_phone", phone);
+      localStorage.setItem("lead_company", company);
+
+      const savedLeads = JSON.parse(localStorage.getItem("dodavkari_saved_leads") || "[]");
+      savedLeads.push({
+        date: new Date().toISOString(),
+        topic,
+        name,
+        phone,
+        company: company || "Neuvedeno",
+        van: wizardAnswers.pocet_aut?.label || "Neuvedeno",
+        contactPreference: isCall ? "Zavolejte mi" : "Napište mi na WhatsApp"
+      });
+      localStorage.setItem("dodavkari_saved_leads", JSON.stringify(savedLeads));
+
+      // Odeslání do Google Tabulky (window.LEADS_WEBHOOK ze shared.js)
+      if (window.LEADS_WEBHOOK && window.LEADS_WEBHOOK.startsWith("http")) {
+        try {
+          fetch(window.LEADS_WEBHOOK, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+              date: new Date().toLocaleString("cs-CZ"),
+              topic,
+              name,
+              phone,
+              company: company || "Neuvedeno",
+              van: `${wizardAnswers.pocet_aut?.label || ""} (${priceStr} Kč)`,
+              contactPreference: isCall ? "Zavolejte mi" : "Napište mi na WhatsApp"
+            })
+          }).catch(() => {});
+        } catch (err) {}
+      }
+
+      document.getElementById("connect-form-box").classList.add("hidden");
+      document.getElementById("connect-success-box").classList.remove("hidden");
+    }
+
+    function backToMatchedSection() {
+      document.getElementById("connect-section").classList.add("hidden");
+      document.getElementById("matched-section").classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // =========================================================================
+    // 5. OBECNÝ SEZNAM FIREM (NEPERSONALIZOVANÝ, BEZ PROPOJENÍ NA DOTAZNÍK)
+    // =========================================================================
+    let crmState = JSON.parse(localStorage.getItem("dodavkari_leads_crm") || "{}");
+
+    function openCatalogView() {
+      document.getElementById("wizard-section").classList.add("hidden");
+      document.getElementById("searching-section").classList.add("hidden");
+      document.getElementById("matched-section").classList.add("hidden");
+      document.getElementById("connect-section").classList.add("hidden");
+
+      const cat = document.getElementById("catalog-section");
+      cat.classList.remove("hidden");
+
+      populateRegions();
+      document.getElementById("f-region").value = "all";
+      document.getElementById("f-status").value = "all";
+      document.getElementById("f-search").value = "";
+
+      renderLeads();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function populateRegions() {
+      const sel = document.getElementById("f-region");
+      const counts = {};
+      (window.LEADS_DATA || []).forEach(l => {
+        counts[l.region] = (counts[l.region] || 0) + 1;
+      });
+      sel.innerHTML = `<option value="all">Všechny kraje ČR (${(window.LEADS_DATA || []).length} firem)</option>` +
+        Object.keys(counts).sort().map(r => `<option value="${r}">${r} (${counts[r]})</option>`).join("");
+    }
+
+    function saveCrm(leadId, field, value) {
+      if (!crmState[leadId]) crmState[leadId] = { status: "none", note: "" };
+      crmState[leadId][field] = value;
+      localStorage.setItem("dodavkari_leads_crm", JSON.stringify(crmState));
+      renderLeads();
+    }
+
+    function updateStats() {
+      const vals = Object.values(crmState);
+      const called = vals.filter(v => v.status === "called").length;
+      const won = vals.filter(v => v.status === "won").length;
+      const el = document.getElementById("crm-stats");
+      if (el) el.textContent = `${called} osloveno • ${won} jezdíme`;
+    }
+
+    function renderLeads() {
+      updateStats();
+      const reg = document.getElementById("f-region").value;
+      const stat = document.getElementById("f-status").value;
+      const q = document.getElementById("f-search").value.trim().toLowerCase();
+
+      // Obecný seznam NEPOUŽÍVÁ odpovědi z dotazníku — řadí firmy jen abecedně podle názvu
+      const genericList = [...(window.LEADS_DATA || [])].sort((a, b) => a.name.localeCompare(b.name, "cs"));
+
+      const filtered = genericList.filter(l => {
+        const c = crmState[l.id] || { status: "none", note: "" };
+        if (reg !== "all" && l.region !== reg) return false;
+        if (stat !== "all" && c.status !== stat) return false;
+        if (q && !(l.name.toLowerCase().includes(q) || l.city.toLowerCase().includes(q) || l.whatTheyMake.toLowerCase().includes(q) || l.ico.includes(q))) return false;
+        return true;
+      });
+
+      const container = document.getElementById("leads-container");
+      container.innerHTML = filtered.map(l => {
+        const c = crmState[l.id] || { status: "none", note: "" };
+
+        return `
+          <article class="light-card-subtle rounded-3xl p-5 sm:p-6 space-y-3">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h4 class="text-base sm:text-lg font-bold text-gray-900">${l.name}</h4>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-gray-100 border border-gray-200 text-gray-600">IČO ${l.ico}</span>
+                </div>
+                <div class="text-xs sm:text-sm text-gray-600 mt-0.5">
+                  <strong>${l.region}</strong> (${l.city}) • Obor CZ-NACE: ${l.nace}
+                </div>
+              </div>
+
+              <select onchange="saveCrm('${l.id}', 'status', this.value)"
+                      class="self-start sm:self-auto bg-white border border-gray-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-800">
+                <option value="none" ${c.status === 'none' ? 'selected' : ''}>Neosloveno</option>
+                <option value="called" ${c.status === 'called' ? 'selected' : ''}>Osloveno</option>
+                <option value="won" ${c.status === 'won' ? 'selected' : ''}>Jezdíme pro ně</option>
+              </select>
+            </div>
+
+            <div class="text-xs text-gray-600 leading-relaxed">
+              <strong>Výroba:</strong> ${l.whatTheyMake}
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200 text-xs sm:text-sm">
+              <div class="flex flex-wrap items-center gap-3 text-gray-700">
+                <span>${l.contactPerson}</span>
+                <a href="tel:${l.contactPhone.split('/')[0].trim()}" class="text-emerald-700 font-bold hover:underline">${l.contactPhone}</a>
+                <a href="mailto:${l.contactEmail}" class="text-[#D93814] hover:underline">${l.contactEmail}</a>
+                <a href="${l.web}" target="_blank" rel="noopener" class="text-gray-500 hover:text-gray-900 underline">Web ↗</a>
+              </div>
+            </div>
+
+          </article>
+        `;
+      }).join("");
+    }
+
+    // Spuštění prvního kroku dotazníku (nebo přímý náhled přes ?view=matched / ?view=connect / ?view=catalog)
+    renderCurrentQuestion();
+    const urlView = new URLSearchParams(location.search).get("view");
+    if (urlView === "matched") {
+      document.getElementById("wizard-section").classList.add("hidden");
+      showMatchedResults();
+    } else if (urlView === "connect" || urlView === "uc") {
+      openInterestNextStep();
+    } else if (urlView === "catalog") {
+      openCatalogView();
+    }
+  </script>
+
+  <!-- FOMO SPODNÍ NOTIFIKACE ("Právě se přidal dopravce z X kraje" — 1x za život návštěvníka) -->
+  <div id="fomo-lifetime-toast"
+       class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[999] bg-white/95 backdrop-blur-md border border-emerald-500/30 rounded-2xl px-4 py-3 shadow-2xl items-center gap-3 text-xs sm:text-sm text-gray-900 font-semibold transition-all duration-300 max-w-[92vw]">
+    <span class="relative flex h-3 w-3 shrink-0">
+      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+      <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+    </span>
+    <span id="fomo-lifetime-text">Právě se přidal dopravce z Plzeňského kraje</span>
+    <span class="text-[11px] text-gray-400 font-normal shrink-0">před chvílí</span>
+  </div>
+
+</body>
+</html>
